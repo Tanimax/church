@@ -1,0 +1,129 @@
+@using System.Globalization
+@using ChurchAttendance.Components.Shared
+
+@if (Data is { Count: > 0 })
+{
+    var maxY = ComputeMaxY();
+    var points = ComputePoints(maxY);
+    var linePath = BuildLinePath(points);
+    var areaPath = BuildAreaPath(points);
+    var last = points[^1];
+
+    <div class="chart-card">
+        <h5>@Title</h5>
+        <div class="chart-svg-wrap">
+            <svg viewBox="0 0 @ViewWidth @ViewHeight" class="chart-line-plot" data-chart="line" role="img" aria-label="@Title">
+                <line class="chart-gridline" x1="@Left" x2="@(ViewWidth - Right)" y1="@Fmt(YForValue(0, maxY))" y2="@Fmt(YForValue(0, maxY))" />
+                <line class="chart-gridline" x1="@Left" x2="@(ViewWidth - Right)" y1="@Fmt(YForValue(maxY / 2.0, maxY))" y2="@Fmt(YForValue(maxY / 2.0, maxY))" />
+                <line class="chart-gridline" x1="@Left" x2="@(ViewWidth - Right)" y1="@Fmt(YForValue(maxY, maxY))" y2="@Fmt(YForValue(maxY, maxY))" />
+
+                @SvgText(Left - 6, YForValue(0, maxY) + 3, "chart-axis-label", "end", "0")
+                @SvgText(Left - 6, YForValue(maxY / 2.0, maxY) + 3, "chart-axis-label", "end", ((int)(maxY / 2)).ToString())
+                @SvgText(Left - 6, YForValue(maxY, maxY) + 3, "chart-axis-label", "end", ((int)maxY).ToString())
+
+                <path d="@areaPath" fill="@SeriesColor" opacity="0.1" stroke="none" />
+                <path d="@linePath" fill="none" stroke="@SeriesColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" />
+
+                @foreach (var p in points)
+                {
+                    <circle class="chart-point-hit" data-label="@p.Label" data-value="@p.Value" data-x="@Fmt(p.X)"
+                            cx="@Fmt(p.X)" cy="@Fmt(p.Y)" r="12" fill="transparent" tabindex="0" />
+                    <circle cx="@Fmt(p.X)" cy="@Fmt(p.Y)" r="4" fill="@SeriesColor" stroke="var(--surface-1)" stroke-width="2" />
+                }
+
+                @SvgText(last.X, last.Y - 12, "chart-value-label", "end", last.Value.ToString())
+
+                @foreach (var p in points)
+                {
+                    @SvgText(p.X, ViewHeight - 6, "chart-axis-label", "middle", p.Label)
+                }
+
+                <line class="chart-crosshair" x1="0" x2="0" y1="@Top" y2="@(ViewHeight - Bottom)" hidden />
+            </svg>
+        </div>
+        <details class="chart-table-toggle">
+            <summary>Voir en tableau</summary>
+            <table class="table table-sm">
+                <thead><tr><th>@XAxisLabel</th><th>@SeriesName</th></tr></thead>
+                <tbody>
+                    @foreach (var d in Data)
+                    {
+                        <tr><td>@d.Label</td><td>@d.Value</td></tr>
+                    }
+                </tbody>
+            </table>
+        </details>
+    </div>
+}
+
+@code {
+    [Parameter] public List<ChartPoint> Data { get; set; } = new();
+    [Parameter] public string Title { get; set; } = "";
+    [Parameter] public string SeriesName { get; set; } = "Valeur";
+    [Parameter] public string XAxisLabel { get; set; } = "Période";
+    [Parameter] public string SeriesColor { get; set; } = "var(--series-1)";
+
+    private const int ViewWidth = 640;
+    private const int ViewHeight = 240;
+    private const int Left = 32;
+    private const int Right = 12;
+    private const int Top = 16;
+    private const int Bottom = 28;
+
+    private static string Fmt(double value) => value.ToString("0.##", CultureInfo.InvariantCulture);
+
+    // <text> is a reserved Razor transition tag and can't carry attributes directly,
+    // so SVG text labels are built as an encoded raw string instead.
+    private static MarkupString SvgText(double x, double y, string cssClass, string anchor, string content)
+    {
+        var safe = System.Net.WebUtility.HtmlEncode(content);
+        return new MarkupString($"<text class=\"{cssClass}\" x=\"{Fmt(x)}\" y=\"{Fmt(y)}\" text-anchor=\"{anchor}\">{safe}</text>");
+    }
+
+    private double ComputeMaxY()
+    {
+        var max = Data.Count > 0 ? Data.Max(d => d.Value) : 0;
+        return max <= 0 ? 5 : Math.Ceiling(max / 5.0) * 5;
+    }
+
+    private double YForValue(double value, double maxY)
+    {
+        var plotHeight = ViewHeight - Top - Bottom;
+        return Top + plotHeight - (value / maxY) * plotHeight;
+    }
+
+    private record PlottedPoint(double X, double Y, string Label, int Value);
+
+    private List<PlottedPoint> ComputePoints(double maxY)
+    {
+        var plotWidth = ViewWidth - Left - Right;
+        var n = Data.Count;
+        var result = new List<PlottedPoint>();
+        for (var i = 0; i < n; i++)
+        {
+            var x = n == 1 ? Left + plotWidth / 2.0 : Left + (plotWidth * i / (double)(n - 1));
+            result.Add(new PlottedPoint(x, YForValue(Data[i].Value, maxY), Data[i].Label, Data[i].Value));
+        }
+        return result;
+    }
+
+    private string BuildLinePath(List<PlottedPoint> points)
+    {
+        var sb = new System.Text.StringBuilder();
+        for (var i = 0; i < points.Count; i++)
+        {
+            sb.Append(i == 0 ? "M" : "L");
+            sb.Append(Fmt(points[i].X)).Append(',').Append(Fmt(points[i].Y)).Append(' ');
+        }
+        return sb.ToString();
+    }
+
+    private string BuildAreaPath(List<PlottedPoint> points)
+    {
+        var baseline = ViewHeight - Bottom;
+        var line = BuildLinePath(points);
+        var last = points[^1];
+        var first = points[0];
+        return $"{line} L{Fmt(last.X)},{Fmt(baseline)} L{Fmt(first.X)},{Fmt(baseline)} Z";
+    }
+}

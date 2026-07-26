@@ -1,0 +1,141 @@
+using System.Net.Http.Json;
+using ChurchAttendance.Data;
+using ChurchAttendance.Endpoints;
+using ChurchAttendance.Models;
+using ChurchAttendance.Tests.Infrastructure;
+using Microsoft.EntityFrameworkCore;
+
+namespace ChurchAttendance.Tests.Endpoints;
+
+public class CheckInEndpointsTests
+{
+    private static async Task<Member> SeedMemberAsync(AppDbContext db, string token = "member-token", bool isActive = true)
+    {
+        var member = new Member
+        {
+            FullName = "Jean Dupont",
+            Token = token,
+            IsActive = isActive,
+            CreatedAt = DateTime.UtcNow
+        };
+        db.Members.Add(member);
+        await db.SaveChangesAsync();
+        return member;
+    }
+
+    [Fact]
+    public async Task CheckIn_UnknownToken_ReturnsNotFoundStatus()
+    {
+        using var factory = new CustomWebApplicationFactory();
+        var client = factory.CreateClient();
+
+        var response = await client.PostAsJsonAsync("/api/checkin", new CheckInRequest("does-not-exist"));
+        var body = await response.Content.ReadFromJsonAsync<CheckInResponse>();
+
+        response.EnsureSuccessStatusCode();
+        Assert.Equal("not_found", body!.Status);
+    }
+
+    [Fact]
+    public async Task CheckIn_InactiveMember_ReturnsNotFoundStatus()
+    {
+        using var factory = new CustomWebApplicationFactory();
+        await using (var db = factory.CreateDbContext())
+        {
+            await SeedMemberAsync(db, isActive: false);
+        }
+        var client = factory.CreateClient();
+
+        var response = await client.PostAsJsonAsync("/api/checkin", new CheckInRequest("member-token"));
+        var body = await response.Content.ReadFromJsonAsync<CheckInResponse>();
+
+        Assert.Equal("not_found", body!.Status);
+    }
+
+    [Fact]
+    public async Task CheckIn_ValidToken_RecordsAttendanceAndReturnsOk()
+    {
+        using var factory = new CustomWebApplicationFactory();
+        await using (var db = factory.CreateDbContext())
+        {
+            await SeedMemberAsync(db);
+        }
+        var client = factory.CreateClient();
+
+        var response = await client.PostAsJsonAsync("/api/checkin", new CheckInRequest("member-token"));
+        var body = await response.Content.ReadFromJsonAsync<CheckInResponse>();
+
+        Assert.Equal("ok", body!.Status);
+        Assert.Equal("Jean Dupont", body.FullName);
+        Assert.NotNull(body.CheckedInAt);
+
+        await using var verifyDb = factory.CreateDbContext();
+        Assert.Equal(1, await verifyDb.Attendances.CountAsync());
+    }
+
+    [Fact]
+    public async Task CheckIn_SecondCheckInSameDay_ReturnsDuplicateStatus()
+    {
+        using var factory = new CustomWebApplicationFactory();
+        await using (var db = factory.CreateDbContext())
+        {
+            await SeedMemberAsync(db);
+        }
+        var client = factory.CreateClient();
+
+        await client.PostAsJsonAsync("/api/checkin", new CheckInRequest("member-token"));
+        var second = await client.PostAsJsonAsync("/api/checkin", new CheckInRequest("member-token"));
+        var body = await second.Content.ReadFromJsonAsync<CheckInResponse>();
+
+        Assert.Equal("duplicate", body!.Status);
+
+        await using var verifyDb = factory.CreateDbContext();
+        Assert.Equal(1, await verifyDb.Attendances.CountAsync());
+    }
+
+    [Fact]
+    public async Task CheckIn_SainteCene_AlsoAutoRecordsCulteAttendance()
+    {
+        using var factory = new CustomWebApplicationFactory();
+        await using (var db = factory.CreateDbContext())
+        {
+            await SeedMemberAsync(db);
+        }
+        var client = factory.CreateClient();
+
+        using var content = new StringContent(
+            """{"token":"member-token","type":"SainteCene"}""",
+            System.Text.Encoding.UTF8, "application/json");
+        var response = await client.PostAsync("/api/checkin", content);
+        var body = await response.Content.ReadFromJsonAsync<CheckInResponse>();
+
+        Assert.Equal("ok", body!.Status);
+
+        await using var verifyDb = factory.CreateDbContext();
+        var attendances = await verifyDb.Attendances.ToListAsync();
+        Assert.Equal(2, attendances.Count);
+        Assert.Contains(attendances, a => a.Type == AttendanceType.SainteCene && a.CheckedInBy == null);
+        Assert.Contains(attendances, a => a.Type == AttendanceType.Culte && a.CheckedInBy == "Auto (Sainte Cène)");
+    }
+
+    [Fact]
+    public async Task CheckIn_SainteCeneAfterCulteAlreadyRecorded_DoesNotDuplicateCulte()
+    {
+        using var factory = new CustomWebApplicationFactory();
+        await using (var db = factory.CreateDbContext())
+        {
+            await SeedMemberAsync(db);
+        }
+        var client = factory.CreateClient();
+
+        await client.PostAsJsonAsync("/api/checkin", new CheckInRequest("member-token"));
+        using var content = new StringContent(
+            """{"token":"member-token","type":"SainteCene"}""",
+            System.Text.Encoding.UTF8, "application/json");
+        await client.PostAsync("/api/checkin", content);
+
+        await using var verifyDb = factory.CreateDbContext();
+        var culteCount = await verifyDb.Attendances.CountAsync(a => a.Type == AttendanceType.Culte);
+        Assert.Equal(1, culteCount);
+    }
+}

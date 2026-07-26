@@ -1,0 +1,9 @@
+<div class="stat-tile">
+    <div class="stat-label">@Label</div>
+    <div class="stat-value">@Value</div>
+</div>
+
+@code {
+    [Parameter] public string Label { get; set; } = "";
+    [Parameter] public string Value { get; set; } = "";
+}

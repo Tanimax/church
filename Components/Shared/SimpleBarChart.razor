@@ -1,0 +1,108 @@
+@using System.Globalization
+@using ChurchAttendance.Components.Shared
+
+@if (Data is { Count: > 0 })
+{
+    var maxY = ComputeMaxY();
+    var bars = ComputeBars(maxY);
+
+    <div class="chart-card">
+        <h5>@Title</h5>
+        <div class="chart-svg-wrap">
+            <svg viewBox="0 0 @ViewWidth @ViewHeight" data-chart="bar" role="img" aria-label="@Title">
+                <line class="chart-baseline" x1="@Left" x2="@(ViewWidth - Right)" y1="@BaselineY" y2="@BaselineY" />
+
+                @foreach (var b in bars)
+                {
+                    <path class="chart-hit" tabindex="0" data-label="@b.Label" data-value="@b.Value"
+                          d="@b.PathData" fill="@SeriesColor" />
+                    @SvgText(b.CenterX, b.Y - 6, "chart-value-label", "middle", b.Value.ToString())
+                    @SvgText(b.CenterX, ViewHeight - 6, "chart-axis-label", "middle", b.Label)
+                }
+            </svg>
+        </div>
+        <details class="chart-table-toggle">
+            <summary>Voir en tableau</summary>
+            <table class="table table-sm">
+                <thead><tr><th>@XAxisLabel</th><th>@SeriesName</th></tr></thead>
+                <tbody>
+                    @foreach (var d in Data)
+                    {
+                        <tr><td>@d.Label</td><td>@d.Value</td></tr>
+                    }
+                </tbody>
+            </table>
+        </details>
+    </div>
+}
+
+@code {
+    [Parameter] public List<ChartPoint> Data { get; set; } = new();
+    [Parameter] public string Title { get; set; } = "";
+    [Parameter] public string SeriesName { get; set; } = "Valeur";
+    [Parameter] public string XAxisLabel { get; set; } = "Période";
+    [Parameter] public string SeriesColor { get; set; } = "var(--series-1)";
+
+    private const int ViewWidth = 640;
+    private const int ViewHeight = 240;
+    private const int Left = 12;
+    private const int Right = 12;
+    private const int Top = 24;
+    private const int Bottom = 28;
+    private const int BarWidth = 24;
+    private const int Radius = 4;
+
+    private int BaselineY => ViewHeight - Bottom;
+
+    private static string Fmt(double value) => value.ToString("0.##", CultureInfo.InvariantCulture);
+
+    // <text> is a reserved Razor transition tag and can't carry attributes directly,
+    // so SVG text labels are built as an encoded raw string instead.
+    private static MarkupString SvgText(double x, double y, string cssClass, string anchor, string content)
+    {
+        var safe = System.Net.WebUtility.HtmlEncode(content);
+        return new MarkupString($"<text class=\"{cssClass}\" x=\"{Fmt(x)}\" y=\"{Fmt(y)}\" text-anchor=\"{anchor}\">{safe}</text>");
+    }
+
+    private double ComputeMaxY()
+    {
+        var max = Data.Count > 0 ? Data.Max(d => d.Value) : 0;
+        return max <= 0 ? 5 : Math.Ceiling(max / 5.0) * 5;
+    }
+
+    private record BarGeometry(double CenterX, double Y, string Label, int Value, string PathData);
+
+    private List<BarGeometry> ComputeBars(double maxY)
+    {
+        var plotWidth = ViewWidth - Left - Right;
+        var n = Data.Count;
+        var slot = plotWidth / (double)n;
+        var plotHeight = ViewHeight - Top - Bottom;
+        var result = new List<BarGeometry>();
+
+        for (var i = 0; i < n; i++)
+        {
+            var centerX = Left + slot * i + slot / 2.0;
+            var barX = centerX - BarWidth / 2.0;
+            var h = maxY <= 0 ? 0 : (Data[i].Value / maxY) * plotHeight;
+            var y = Top + plotHeight - h;
+            var r = Math.Min(Radius, h / 2.0);
+            var path = BuildBarPath(barX, y, BarWidth, BaselineY, r);
+            result.Add(new BarGeometry(centerX, y, Data[i].Label, Data[i].Value, path));
+        }
+
+        return result;
+    }
+
+    // Rounded top corners, square bottom (anchored to the baseline).
+    private static string BuildBarPath(double x, double y, double width, double baseline, double r)
+    {
+        var right = x + width;
+        return $"M{Fmt(x)},{Fmt(baseline)} " +
+               $"L{Fmt(x)},{Fmt(y + r)} " +
+               $"Q{Fmt(x)},{Fmt(y)} {Fmt(x + r)},{Fmt(y)} " +
+               $"L{Fmt(right - r)},{Fmt(y)} " +
+               $"Q{Fmt(right)},{Fmt(y)} {Fmt(right)},{Fmt(y + r)} " +
+               $"L{Fmt(right)},{Fmt(baseline)} Z";
+    }
+}

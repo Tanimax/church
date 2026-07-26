@@ -1,0 +1,108 @@
+@page "/admin/members"
+@attribute [Authorize]
+@inject IDbContextFactory<AppDbContext> DbFactory
+@inject NavigationManager Nav
+
+<PageTitle>Membres</PageTitle>
+
+<h1>Membres</h1>
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <input type="search" class="form-control w-auto" placeholder="Rechercher un membre..." @bind="searchTerm" @bind:event="oninput" />
+    <a class="btn btn-primary" href="/admin/members/add">+ Ajouter un membre</a>
+</div>
+
+@if (members is null)
+{
+    <p><em>Chargement...</em></p>
+}
+else if (!filteredMembers.Any())
+{
+    <p class="text-muted">Aucun membre trouvé.</p>
+}
+else
+{
+    <table class="table table-striped align-middle">
+        <thead>
+            <tr>
+                <th>Nom</th>
+                <th>Téléphone</th>
+                <th>Sexe</th>
+                <th>Baptisé</th>
+                <th>Ajouté le</th>
+                <th>Statut</th>
+                <th>Carte</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var member in filteredMembers)
+            {
+                <tr>
+                    <td>@member.FullName</td>
+                    <td>@member.Phone</td>
+                    <td>@(member.Gender?.ToString() ?? "—")</td>
+                    <td>@(member.IsBaptized ? "Oui" : "Non")</td>
+                    <td>@member.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy")</td>
+                    <td>
+                        @if (member.IsActive)
+                        {
+                            <span class="badge bg-success">Actif</span>
+                        }
+                        else
+                        {
+                            <span class="badge bg-secondary">Inactif</span>
+                        }
+                    </td>
+                    <td>
+                        <a href="/card/@member.Token" target="_blank">Voir la carte</a>
+                        <a href="/admin/members/edit/@member.Id" class="btn btn-sm btn-outline-secondary ms-2">Modifier</a>
+                        <button type="button" class="btn btn-sm btn-outline-secondary ms-2"
+                                data-url="@CardUrl(member.Token)" onclick="copyToClipboard(this)">
+                            Copier le lien
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary ms-2" @onclick="() => ToggleActive(member)">
+                            @(member.IsActive ? "Désactiver" : "Réactiver")
+                        </button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private List<Member>? members;
+    private string searchTerm = "";
+
+    private string CardUrl(string token) => $"{Nav.BaseUri.TrimEnd('/')}/card/{token}";
+
+    private IEnumerable<Member> filteredMembers =>
+        members is null
+            ? Enumerable.Empty<Member>()
+            : string.IsNullOrWhiteSpace(searchTerm)
+                ? members
+                : members.Where(m => m.FullName.Contains(searchTerm, StringComparison.OrdinalIgnoreCase));
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadMembers();
+    }
+
+    private async Task LoadMembers()
+    {
+        await using var db = await DbFactory.CreateDbContextAsync();
+        members = await db.Members.OrderBy(m => m.FullName).ToListAsync();
+    }
+
+    private async Task ToggleActive(Member member)
+    {
+        await using var db = await DbFactory.CreateDbContextAsync();
+        var tracked = await db.Members.FindAsync(member.Id);
+        if (tracked is not null)
+        {
+            tracked.IsActive = !tracked.IsActive;
+            await db.SaveChangesAsync();
+            member.IsActive = tracked.IsActive;
+        }
+    }
+}

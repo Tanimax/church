@@ -1,0 +1,124 @@
+@page "/admin/reports"
+@attribute [Authorize]
+@inject IDbContextFactory<AppDbContext> DbFactory
+
+<PageTitle>Rapport Dominical</PageTitle>
+
+<h1>Rapport Dominical</h1>
+
+<div class="row g-2 align-items-end mb-4">
+    <div class="col-auto">
+        <label class="form-label">Dimanche</label>
+        <input type="date" class="form-control" @bind="selectedDate" @bind:after="LoadReport" />
+    </div>
+    <div class="col-auto">
+        <a class="btn btn-outline-secondary" href="@ExportUrl" target="_blank">Exporter en CSV</a>
+    </div>
+</div>
+
+@if (detailRows is null)
+{
+    <p><em>Chargement...</em></p>
+}
+else
+{
+    <p><strong>@detailRows.Count</strong> présent(s) le @selectedDate.ToString("dd/MM/yyyy").</p>
+
+    <h4>Présences</h4>
+    @if (!detailRows.Any())
+    {
+        <p class="text-muted">Aucune présence enregistrée ce dimanche.</p>
+    }
+    else
+    {
+        <table class="table table-sm table-striped">
+            <thead><tr><th>Nom</th><th>Heure</th></tr></thead>
+            <tbody>
+                @foreach (var row in detailRows)
+                {
+                    <tr>
+                        <td>@row.FullName</td>
+                        <td>@row.CheckedInAt.ToLocalTime().ToString("HH:mm")</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+
+    <h4 class="mt-4">Membres absents ce dimanche</h4>
+    <table class="table table-sm">
+        <thead><tr><th>Nom</th><th>Téléphone</th><th>Dernière présence</th></tr></thead>
+        <tbody>
+            @foreach (var m in absentMembers)
+            {
+                <tr>
+                    <td>@m.FullName</td>
+                    <td>@m.Phone</td>
+                    <td>@(m.LastAttendance is null ? "Jamais" : m.LastAttendance.Value.ToString("dd/MM/yyyy"))</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private DateOnly selectedDate = GetMostRecentSunday();
+
+    private List<(string FullName, DateTime CheckedInAt)>? detailRows;
+    private List<(string FullName, string? Phone, DateOnly? LastAttendance)> absentMembers = new();
+
+    private string ExportUrl => $"/admin/reports/export.csv?start={selectedDate:yyyy-MM-dd}&end={selectedDate:yyyy-MM-dd}";
+
+    protected override async Task OnInitializedAsync() => await LoadReport();
+
+    private async Task LoadReport()
+    {
+        await using var db = await DbFactory.CreateDbContextAsync();
+
+        var attendances = await db.Attendances
+            .Include(a => a.Member)
+            .Include(a => a.ServiceSession)
+            .Where(a => a.ServiceSession!.Date == selectedDate)
+            .ToListAsync();
+
+        // A member can have both a Culte and a Sainte Cène record for the same Sunday —
+        // for general attendance purposes that's a single presence, not two, so keep only
+        // the earliest (first arrival) record per member.
+        var dedupedAttendances = attendances
+            .GroupBy(a => a.MemberId)
+            .Select(g => g.OrderBy(a => a.CheckedInAt).First())
+            .OrderBy(a => a.Member!.FullName)
+            .ToList();
+
+        detailRows = dedupedAttendances
+            .Select(a => (a.Member!.FullName, a.CheckedInAt))
+            .ToList();
+
+        var presentMemberIds = dedupedAttendances.Select(a => a.MemberId).Distinct().ToHashSet();
+
+        var absentMembersRaw = await db.Members
+            .Where(m => m.IsActive && !presentMemberIds.Contains(m.Id))
+            .Select(m => new
+            {
+                m.FullName,
+                m.Phone,
+                LastAttendance = db.Attendances
+                    .Where(a => a.MemberId == m.Id)
+                    .OrderByDescending(a => a.ServiceSession!.Date)
+                    .Select(a => (DateOnly?)a.ServiceSession!.Date)
+                    .FirstOrDefault()
+            })
+            .ToListAsync();
+
+        absentMembers = absentMembersRaw
+            .Select(m => (m.FullName, m.Phone, m.LastAttendance))
+            .OrderBy(m => m.LastAttendance ?? DateOnly.MinValue)
+            .ToList();
+    }
+
+    private static DateOnly GetMostRecentSunday()
+    {
+        var today = DateOnly.FromDateTime(DateTime.Today);
+        return today.AddDays(-(int)today.DayOfWeek);
+    }
+}

@@ -1,0 +1,50 @@
+<div class="chart-card">
+    <h5>@Title</h5>
+    <div class="stacked-bar-track" data-chart="stacked" role="img" aria-label="@Title">
+        @if (PresentCount > 0)
+        {
+            <div class="chart-hit stacked-bar-segment" tabindex="0" data-label="Présents" data-value="@PresentCount"
+                 style="flex-basis:@Fmt(PresentPercent)%; background:var(--status-good);">
+                @if (PresentPercent >= 12)
+                {
+                    @PresentCount
+                }
+            </div>
+        }
+        @if (AbsentCount > 0)
+        {
+            <div class="chart-hit stacked-bar-segment" tabindex="0" data-label="Absents" data-value="@AbsentCount"
+                 style="flex-basis:@Fmt(AbsentPercent)%; background:var(--text-muted);">
+                @if (AbsentPercent >= 12)
+                {
+                    @AbsentCount
+                }
+            </div>
+        }
+    </div>
+    <div class="legend-row">
+        <span><span class="legend-swatch" style="background:var(--status-good);"></span>Présents (@PresentCount)</span>
+        <span><span class="legend-swatch" style="background:var(--text-muted);"></span>Absents (@AbsentCount)</span>
+    </div>
+    <details class="chart-table-toggle">
+        <summary>Voir en tableau</summary>
+        <table class="table table-sm">
+            <tbody>
+                <tr><td>Présents</td><td>@PresentCount</td></tr>
+                <tr><td>Absents</td><td>@AbsentCount</td></tr>
+            </tbody>
+        </table>
+    </details>
+</div>
+
+@code {
+    [Parameter] public string Title { get; set; } = "";
+    [Parameter] public int PresentCount { get; set; }
+    [Parameter] public int AbsentCount { get; set; }
+
+    private int Total => PresentCount + AbsentCount;
+    private double PresentPercent => Total == 0 ? 0 : PresentCount * 100.0 / Total;
+    private double AbsentPercent => Total == 0 ? 0 : AbsentCount * 100.0 / Total;
+
+    private static string Fmt(double value) => value.ToString(System.Globalization.CultureInfo.InvariantCulture);
+}

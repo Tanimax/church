@@ -1,0 +1,77 @@
+@page "/admin/reports/visiteurs"
+@attribute [Authorize]
+@inject IDbContextFactory<AppDbContext> DbFactory
+@inject NavigationManager Nav
+
+<PageTitle>Rapport Visiteurs</PageTitle>
+
+<h1>Rapport Visiteurs</h1>
+
+<div class="card mb-4" style="max-width:360px;">
+    <div class="card-body text-center">
+        <h5 class="card-title">Fiche visiteur à partager</h5>
+        <img src="/visitor/qr.png" alt="QR code fiche visiteur" style="max-width:180px;" />
+        <div class="input-group mt-2">
+            <input type="text" class="form-control form-control-sm" readonly value="@VisitorFormUrl" />
+            <button type="button" class="btn btn-sm btn-outline-secondary" data-url="@VisitorFormUrl" onclick="copyToClipboard(this)">
+                Copier le lien
+            </button>
+        </div>
+    </div>
+</div>
+
+<div class="mb-3">
+    <label class="form-label">Dimanche</label>
+    <input type="date" class="form-control w-auto" @bind="selectedDate" @bind:after="LoadReport" />
+</div>
+
+@if (visitors is null)
+{
+    <p><em>Chargement...</em></p>
+}
+else if (!visitors.Any())
+{
+    <p class="text-muted">Aucun visiteur enregistré pour cette date.</p>
+}
+else
+{
+    <table class="table table-sm table-striped">
+        <thead>
+            <tr>
+                <th>Nom complet</th>
+                <th>Téléphone</th>
+                <th>Email</th>
+                <th>Heure</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var v in visitors)
+            {
+                <tr>
+                    <td>@v.FullName</td>
+                    <td>@v.Phone</td>
+                    <td>@v.Email</td>
+                    <td>@v.CreatedAt.ToLocalTime().ToString("HH:mm")</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private DateOnly selectedDate = DateOnly.FromDateTime(DateTime.Today);
+    private List<Visitor>? visitors;
+
+    private string VisitorFormUrl => $"{Nav.BaseUri.TrimEnd('/')}/visitor";
+
+    protected override async Task OnInitializedAsync() => await LoadReport();
+
+    private async Task LoadReport()
+    {
+        await using var db = await DbFactory.CreateDbContextAsync();
+        visitors = await db.Visitors
+            .Where(v => v.VisitDate == selectedDate)
+            .OrderBy(v => v.CreatedAt)
+            .ToListAsync();
+    }
+}

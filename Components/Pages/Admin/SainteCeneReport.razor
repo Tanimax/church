@@ -1,0 +1,102 @@
+@page "/admin/reports/sainte-cene"
+@attribute [Authorize]
+@inject IDbContextFactory<AppDbContext> DbFactory
+
+<PageTitle>Rapport Sainte Cène</PageTitle>
+
+<h1>Rapport Sainte Cène</h1>
+
+<div class="mb-3">
+    <label class="form-label">Année</label>
+    <select class="form-select w-auto" @bind="selectedYear" @bind:after="LoadReport">
+        @foreach (var y in availableYears)
+        {
+            <option value="@y">@y</option>
+        }
+    </select>
+</div>
+
+@if (rows is null)
+{
+    <p><em>Chargement...</em></p>
+}
+else if (!rows.Any())
+{
+    <p class="text-muted">Aucun membre actif.</p>
+}
+else
+{
+    <div class="table-responsive">
+        <table class="table table-sm table-bordered text-center">
+            <thead>
+                <tr>
+                    <th class="text-start">Membre</th>
+                    @foreach (var m in MonthLabels)
+                    {
+                        <th>@m</th>
+                    }
+                    <th>Total</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var row in rows)
+                {
+                    <tr>
+                        <td class="text-start">@row.FullName</td>
+                        @for (var i = 1; i <= 12; i++)
+                        {
+                            var present = row.MonthsPresent.Contains(i);
+                            <td class="@(present ? "table-success" : "")">@(present ? "✓" : "")</td>
+                        }
+                        <td><strong>@row.MonthsPresent.Count</strong></td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+
+@code {
+    private static readonly string[] MonthLabels =
+        { "Jan", "Fév", "Mar", "Avr", "Mai", "Juin", "Juil", "Août", "Sep", "Oct", "Nov", "Déc" };
+
+    private int selectedYear = DateTime.Today.Year;
+    private List<int> availableYears = new();
+    private List<MemberRow>? rows;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var currentYear = DateTime.Today.Year;
+        availableYears = Enumerable.Range(currentYear - 3, 4).Reverse().ToList();
+
+        await LoadReport();
+    }
+
+    private async Task LoadReport()
+    {
+        await using var db = await DbFactory.CreateDbContextAsync();
+
+        var attendances = await db.Attendances
+            .Include(a => a.ServiceSession)
+            .Where(a => a.Type == AttendanceType.SainteCene && a.ServiceSession!.Date.Year == selectedYear)
+            .Select(a => new { a.MemberId, Month = a.ServiceSession!.Date.Month })
+            .ToListAsync();
+
+        var monthsByMember = attendances
+            .GroupBy(a => a.MemberId)
+            .ToDictionary(g => g.Key, g => g.Select(a => a.Month).ToHashSet());
+
+        var members = await db.Members
+            .Where(m => m.IsActive)
+            .OrderBy(m => m.FullName)
+            .ToListAsync();
+
+        rows = members
+            .Select(m => new MemberRow(
+                m.FullName,
+                monthsByMember.TryGetValue(m.Id, out var months) ? months : new HashSet<int>()))
+            .ToList();
+    }
+
+    private record MemberRow(string FullName, HashSet<int> MonthsPresent);
+}

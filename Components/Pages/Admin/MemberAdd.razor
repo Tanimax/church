@@ -1,0 +1,116 @@
+@page "/admin/members/add"
+@attribute [Authorize]
+@inject IDbContextFactory<AppDbContext> DbFactory
+@inject NavigationManager Nav
+@inject EmailService EmailService
+
+<PageTitle>Ajouter un membre</PageTitle>
+
+<h1>Ajouter un membre</h1>
+
+@if (createdMember is null)
+{
+    <EditForm Model="formModel" OnValidSubmit="HandleSubmit" FormName="add-member">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+
+        <div class="mb-3">
+            <label class="form-label">Nom complet</label>
+            <InputText class="form-control" @bind-Value="formModel!.FullName" />
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Téléphone (optionnel)</label>
+            <InputText class="form-control" @bind-Value="formModel!.Phone" />
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Courriel (optionnel — un lien de bienvenue lui sera envoyé)</label>
+            <InputText type="email" class="form-control" @bind-Value="formModel!.Email" />
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Sexe</label>
+            <InputSelect class="form-select" @bind-Value="formModel!.Sexe">
+                <option value="">-- Sélectionner --</option>
+                <option value="Homme">Homme</option>
+                <option value="Femme">Femme</option>
+            </InputSelect>
+        </div>
+
+        <div class="mb-3 form-check">
+            <InputCheckbox class="form-check-input" id="isBaptized" @bind-Value="formModel!.IsBaptized" />
+            <label class="form-check-label" for="isBaptized">Baptisé(e)</label>
+        </div>
+
+        <button type="submit" class="btn btn-primary">Créer la carte</button>
+        <a href="/admin/members" class="btn btn-link">Annuler</a>
+    </EditForm>
+}
+else
+{
+    <div class="alert alert-success">
+        <h4>Membre créé : @createdMember.FullName</h4>
+        <p>Partage ce lien avec le membre (SMS, WhatsApp...) :</p>
+        <div class="input-group mb-3">
+            <input type="text" class="form-control" readonly value="@cardUrl" />
+        </div>
+        <img src="/api/members/@createdMember.Token/qr.png" alt="QR code" style="max-width:220px" />
+        @if (!string.IsNullOrWhiteSpace(createdMember.Email))
+        {
+            <p class="mt-3 mb-0">📧 Un courriel de bienvenue a été envoyé à @createdMember.Email.</p>
+        }
+    </div>
+
+    <a href="/admin/members/add" class="btn btn-primary">Ajouter un autre membre</a>
+    <a href="/admin/members" class="btn btn-link">Retour à la liste</a>
+}
+
+@code {
+    [SupplyParameterFromForm]
+    private MemberFormModel? formModel { get; set; }
+
+    private Member? createdMember;
+    private string cardUrl = "";
+
+    protected override void OnInitialized()
+    {
+        formModel ??= new MemberFormModel();
+    }
+
+    private async Task HandleSubmit()
+    {
+        await using var db = await DbFactory.CreateDbContextAsync();
+        var member = new Member
+        {
+            FullName = formModel!.FullName.Trim(),
+            Phone = string.IsNullOrWhiteSpace(formModel.Phone) ? null : formModel.Phone.Trim(),
+            Email = string.IsNullOrWhiteSpace(formModel.Email) ? null : formModel.Email.Trim(),
+            Token = TokenService.GenerateToken(),
+            CreatedAt = DateTime.UtcNow,
+            Gender = formModel.Sexe,
+            IsBaptized = formModel.IsBaptized
+        };
+        db.Members.Add(member);
+        await db.SaveChangesAsync();
+
+        createdMember = member;
+        cardUrl = $"{Nav.BaseUri.TrimEnd('/')}/card/{member.Token}";
+
+        if (!string.IsNullOrWhiteSpace(member.Email))
+        {
+            await EmailService.SendWelcomeEmailAsync(member.Email, member.FullName, cardUrl);
+        }
+    }
+
+    private class MemberFormModel
+    {
+        [Required(ErrorMessage = "Le nom est requis.")]
+        public string FullName { get; set; } = "";
+        public string? Phone { get; set; }
+        [EmailAddress(ErrorMessage = "Adresse courriel invalide.")]
+        public string? Email { get; set; }
+        public Gender? Sexe { get; set; }
+        public bool IsBaptized { get; set; }
+    }
+}

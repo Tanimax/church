@@ -1,0 +1,146 @@
+@page "/"
+@attribute [Authorize]
+@inject IDbContextFactory<AppDbContext> DbFactory
+@using ChurchAttendance.Components.Shared
+
+<PageTitle>Tableau de bord</PageTitle>
+
+<h1>Tableau de bord</h1>
+
+@if (loaded)
+{
+    <div class="dashboard">
+        <div class="kpi-row">
+            <StatTile Label="Membres actifs" Value="@activeMemberCount.ToString()" />
+            <StatTile Label="Présents dernier dimanche" Value="@presentLastSunday.ToString()" />
+            <StatTile Label="Sainte Cène ce mois-ci" Value="@sainteCeneThisMonth.ToString()" />
+            <StatTile Label="Visiteurs (30 derniers jours)" Value="@visitorsLast30Days.ToString()" />
+        </div>
+
+        <div class="charts-grid">
+            <SimpleLineChart Title="Tendance de présence dominicale (10 derniers dimanches)"
+                              Data="sundayTrend" SeriesName="Présents" XAxisLabel="Dimanche"
+                              SeriesColor="var(--series-1)" />
+
+            <SimpleBarChart Title="@($"Sainte Cène par mois ({DateTime.Today.Year})")"
+                             Data="sainteCeneTrend" SeriesName="Présents" XAxisLabel="Mois"
+                             SeriesColor="var(--series-2)" />
+
+            <SimpleBarChart Title="Visiteurs par mois (6 derniers mois)"
+                             Data="visitorTrend" SeriesName="Visiteurs" XAxisLabel="Mois"
+                             SeriesColor="var(--series-3)" />
+
+            <StackedBarChart Title="Présence du dernier dimanche"
+                              PresentCount="presentLastSunday" AbsentCount="absentLastSunday" />
+        </div>
+    </div>
+}
+else
+{
+    <p><em>Chargement...</em></p>
+}
+
+@code {
+    [Inject] private IJSRuntime JS { get; set; } = default!;
+
+    private static readonly string[] MonthLabels =
+        { "Jan", "Fév", "Mar", "Avr", "Mai", "Juin", "Juil", "Août", "Sep", "Oct", "Nov", "Déc" };
+
+    private bool loaded;
+    private int activeMemberCount;
+    private int presentLastSunday;
+    private int absentLastSunday;
+    private int sainteCeneThisMonth;
+    private int visitorsLast30Days;
+
+    private List<ChartPoint> sundayTrend = new();
+    private List<ChartPoint> sainteCeneTrend = new();
+    private List<ChartPoint> visitorTrend = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await using var db = await DbFactory.CreateDbContextAsync();
+
+        var today = DateOnly.FromDateTime(DateTime.Today);
+        var lastSunday = today.AddDays(-(int)today.DayOfWeek);
+
+        // --- Sunday attendance trend (last 10 Sundays) ---
+        var sundays = Enumerable.Range(0, 10).Select(i => lastSunday.AddDays(-7 * (9 - i))).ToList();
+
+        var sundayAttendances = await db.Attendances
+            .Include(a => a.ServiceSession)
+            .Where(a => sundays.Contains(a.ServiceSession!.Date))
+            .Select(a => new { a.MemberId, Date = a.ServiceSession!.Date })
+            .ToListAsync();
+
+        var countsByDate = sundayAttendances
+            .GroupBy(a => a.Date)
+            .ToDictionary(g => g.Key, g => g.Select(a => a.MemberId).Distinct().Count());
+
+        sundayTrend = sundays
+            .Select(d => new ChartPoint(d.ToString("dd/MM"), countsByDate.GetValueOrDefault(d, 0)))
+            .ToList();
+
+        // --- Sainte Cène by month, current year ---
+        var currentYear = today.Year;
+        var sainteCeneAttendances = await db.Attendances
+            .Include(a => a.ServiceSession)
+            .Where(a => a.Type == AttendanceType.SainteCene && a.ServiceSession!.Date.Year == currentYear)
+            .Select(a => new { a.MemberId, Month = a.ServiceSession!.Date.Month })
+            .ToListAsync();
+
+        var sceneByMonth = sainteCeneAttendances
+            .GroupBy(a => a.Month)
+            .ToDictionary(g => g.Key, g => g.Select(a => a.MemberId).Distinct().Count());
+
+        sainteCeneTrend = Enumerable.Range(1, 12)
+            .Select(m => new ChartPoint(MonthLabels[m - 1], sceneByMonth.GetValueOrDefault(m, 0)))
+            .ToList();
+
+        sainteCeneThisMonth = sceneByMonth.GetValueOrDefault(today.Month, 0);
+
+        // --- Visitors by month, last 6 months ---
+        var sixMonthsAgo = DateOnly.FromDateTime(DateTime.Today.AddMonths(-5));
+        var rangeStart = new DateOnly(sixMonthsAgo.Year, sixMonthsAgo.Month, 1);
+
+        var visitors = await db.Visitors
+            .Where(v => v.VisitDate >= rangeStart)
+            .ToListAsync();
+
+        var visitorsByYearMonth = visitors
+            .GroupBy(v => (v.VisitDate.Year, v.VisitDate.Month))
+            .ToDictionary(g => g.Key, g => g.Count());
+
+        visitorTrend = Enumerable.Range(0, 6)
+            .Select(i => DateOnly.FromDateTime(DateTime.Today.AddMonths(-(5 - i))))
+            .Select(d => new ChartPoint($"{MonthLabels[d.Month - 1]} {d.Year % 100:D2}", visitorsByYearMonth.GetValueOrDefault((d.Year, d.Month), 0)))
+            .ToList();
+
+        visitorsLast30Days = await db.Visitors.CountAsync(v => v.VisitDate >= DateOnly.FromDateTime(DateTime.Today.AddDays(-30)));
+
+        // --- Present / absent, last Sunday ---
+        var presentIds = await db.Attendances
+            .Include(a => a.ServiceSession)
+            .Where(a => a.ServiceSession!.Date == lastSunday)
+            .Select(a => a.MemberId)
+            .Distinct()
+            .ToListAsync();
+
+        activeMemberCount = await db.Members.CountAsync(m => m.IsActive);
+        presentLastSunday = await db.Members.CountAsync(m => m.IsActive && presentIds.Contains(m.Id));
+        absentLastSunday = activeMemberCount - presentLastSunday;
+
+        loaded = true;
+    }
+
+    private bool chartsInitialized;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (loaded && !chartsInitialized)
+        {
+            chartsInitialized = true;
+            await JS.InvokeVoidAsync("initDashboardCharts");
+        }
+    }
+}

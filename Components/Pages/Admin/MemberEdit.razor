@@ -1,0 +1,124 @@
+@page "/admin/members/edit/{Id:int}"
+@attribute [Authorize]
+@inject IDbContextFactory<AppDbContext> DbFactory
+@inject NavigationManager Nav
+
+<PageTitle>Modifier un membre</PageTitle>
+
+<h1>Modifier un membre</h1>
+
+@if (notFound)
+{
+    <p class="text-muted">Membre introuvable.</p>
+    <a href="/admin/members" class="btn btn-link">Retour à la liste</a>
+}
+else if (formModel is null)
+{
+    <p><em>Chargement...</em></p>
+}
+else
+{
+    <EditForm Model="formModel" OnValidSubmit="HandleSubmit" FormName="edit-member">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+
+        <div class="mb-3">
+            <label class="form-label">Nom complet</label>
+            <InputText class="form-control" @bind-Value="formModel.FullName" />
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Téléphone (optionnel)</label>
+            <InputText class="form-control" @bind-Value="formModel.Phone" />
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Courriel (optionnel)</label>
+            <InputText type="email" class="form-control" @bind-Value="formModel.Email" />
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Sexe</label>
+            <InputSelect class="form-select" @bind-Value="formModel.Sexe">
+                <option value="">-- Sélectionner --</option>
+                <option value="Homme">Homme</option>
+                <option value="Femme">Femme</option>
+            </InputSelect>
+        </div>
+
+        <div class="mb-3 form-check">
+            <InputCheckbox class="form-check-input" id="isBaptized" @bind-Value="formModel.IsBaptized" />
+            <label class="form-check-label" for="isBaptized">Baptisé(e)</label>
+        </div>
+
+        <button type="submit" class="btn btn-primary">Enregistrer</button>
+        <a href="/admin/members" class="btn btn-link">Annuler</a>
+    </EditForm>
+}
+
+@code {
+    [Parameter]
+    public int Id { get; set; }
+
+    [SupplyParameterFromForm]
+    private MemberFormModel? formModel { get; set; }
+
+    private bool notFound;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (formModel is not null)
+        {
+            // Returning from a form post (e.g. validation failure) — keep the posted values.
+            return;
+        }
+
+        await using var db = await DbFactory.CreateDbContextAsync();
+        var member = await db.Members.FindAsync(Id);
+        if (member is null)
+        {
+            notFound = true;
+            return;
+        }
+
+        formModel = new MemberFormModel
+        {
+            FullName = member.FullName,
+            Phone = member.Phone,
+            Email = member.Email,
+            Sexe = member.Gender,
+            IsBaptized = member.IsBaptized
+        };
+    }
+
+    private async Task HandleSubmit()
+    {
+        await using var db = await DbFactory.CreateDbContextAsync();
+        var member = await db.Members.FindAsync(Id);
+        if (member is null)
+        {
+            notFound = true;
+            return;
+        }
+
+        member.FullName = formModel!.FullName.Trim();
+        member.Phone = string.IsNullOrWhiteSpace(formModel.Phone) ? null : formModel.Phone.Trim();
+        member.Email = string.IsNullOrWhiteSpace(formModel.Email) ? null : formModel.Email.Trim();
+        member.Gender = formModel.Sexe;
+        member.IsBaptized = formModel.IsBaptized;
+
+        await db.SaveChangesAsync();
+        Nav.NavigateTo("/admin/members");
+    }
+
+    private class MemberFormModel
+    {
+        [Required(ErrorMessage = "Le nom est requis.")]
+        public string FullName { get; set; } = "";
+        public string? Phone { get; set; }
+        [EmailAddress(ErrorMessage = "Adresse courriel invalide.")]
+        public string? Email { get; set; }
+        public Gender? Sexe { get; set; }
+        public bool IsBaptized { get; set; }
+    }
+}

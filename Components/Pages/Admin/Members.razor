@@ -1,5 +1,6 @@
 @page "/admin/members"
 @attribute [Authorize]
+@rendermode InteractiveServer
 @inject IDbContextFactory<AppDbContext> DbFactory
 @inject NavigationManager Nav
 
@@ -29,10 +30,8 @@ else
                 <th>Prénom</th>
                 <th>Téléphone</th>
                 <th>Sexe</th>
-                <th>État matrimonial</th>
                 <th>Naissance</th>
                 <th>Baptisé</th>
-                <th>Ajouté le</th>
                 <th>Statut</th>
                 <th>Carte</th>
             </tr>
@@ -45,10 +44,8 @@ else
                     <td>@member.FirstName</td>
                     <td>@member.Phone</td>
                     <td>@(member.Gender?.ToString() ?? "—")</td>
-                    <td>@(member.MaritalStatus?.ToLabel() ?? "—")</td>
                     <td>@(member.BirthdayLabel ?? "—")</td>
                     <td>@(member.IsBaptized ? "Oui" : "Non")</td>
-                    <td>@member.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy")</td>
                     <td>
                         @if (member.IsActive)
                         {

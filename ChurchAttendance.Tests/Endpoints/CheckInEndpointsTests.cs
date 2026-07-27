@@ -13,7 +13,8 @@ public class CheckInEndpointsTests
     {
         var member = new Member
         {
-            FullName = "Jean Dupont",
+            FirstName = "Jean",
+            LastName = "Dupont",
             Token = token,
             IsActive = isActive,
             CreatedAt = DateTime.UtcNow

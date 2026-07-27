@@ -30,7 +30,7 @@ public static class CardEndpoints
             var manifest = new
             {
                 name = $"Carte de {member.FullName}",
-                short_name = member.FullName.Split(' ')[0],
+                short_name = member.FirstName,
                 start_url = $"/card/{token}",
                 display = "standalone",
                 background_color = "#ffffff",

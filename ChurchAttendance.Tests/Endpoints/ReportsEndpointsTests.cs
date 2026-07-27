@@ -59,7 +59,7 @@ public class ReportsEndpointsTests
 
         await using (var db = factory.CreateDbContext())
         {
-            var member = new Member { FullName = "Alice Martin", Token = "alice-token", CreatedAt = DateTime.UtcNow };
+            var member = new Member { FirstName = "Alice", LastName = "Martin", Token = "alice-token", CreatedAt = DateTime.UtcNow };
             var session = new ServiceSession { Date = today, Label = "Culte du dimanche" };
             db.Members.Add(member);
             db.ServiceSessions.Add(session);

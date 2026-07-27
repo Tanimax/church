@@ -26,8 +26,11 @@ else
         <thead>
             <tr>
                 <th>Nom</th>
+                <th>Prénom</th>
                 <th>Téléphone</th>
                 <th>Sexe</th>
+                <th>État matrimonial</th>
+                <th>Naissance</th>
                 <th>Baptisé</th>
                 <th>Ajouté le</th>
                 <th>Statut</th>
@@ -38,9 +41,12 @@ else
             @foreach (var member in filteredMembers)
             {
                 <tr>
-                    <td>@member.FullName</td>
+                    <td>@member.LastName</td>
+                    <td>@member.FirstName</td>
                     <td>@member.Phone</td>
                     <td>@(member.Gender?.ToString() ?? "—")</td>
+                    <td>@(member.MaritalStatus?.ToLabel() ?? "—")</td>
+                    <td>@(member.BirthdayLabel ?? "—")</td>
                     <td>@(member.IsBaptized ? "Oui" : "Non")</td>
                     <td>@member.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy")</td>
                     <td>
@@ -91,7 +97,7 @@ else
     private async Task LoadMembers()
     {
         await using var db = await DbFactory.CreateDbContextAsync();
-        members = await db.Members.OrderBy(m => m.FullName).ToListAsync();
+        members = await db.Members.OrderBy(m => m.LastName).ThenBy(m => m.FirstName).ToListAsync();
     }
 
     private async Task ToggleActive(Member member)

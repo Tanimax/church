@@ -100,7 +100,8 @@ else
             .Where(m => m.IsActive && !presentMemberIds.Contains(m.Id))
             .Select(m => new
             {
-                m.FullName,
+                m.FirstName,
+                m.LastName,
                 m.Phone,
                 LastAttendance = db.Attendances
                     .Where(a => a.MemberId == m.Id)
@@ -111,7 +112,7 @@ else
             .ToListAsync();
 
         absentMembers = absentMembersRaw
-            .Select(m => (m.FullName, m.Phone, m.LastAttendance))
+            .Select(m => ($"{m.FirstName} {m.LastName}", m.Phone, m.LastAttendance))
             .OrderBy(m => m.LastAttendance ?? DateOnly.MinValue)
             .ToList();
     }

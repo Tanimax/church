@@ -17,23 +17,25 @@ public class MembersEndpointsTests
         using var factory = new CustomWebApplicationFactory();
         var client = factory.CreateClient();
 
-        var response = await client.PostAsJsonAsync("/api/members/", new CreateMemberRequest("Jean Dupont", "555-1234"));
+        var response = await client.PostAsJsonAsync("/api/members/", new CreateMemberRequest("Jean", "Dupont", "555-1234"));
         var body = await response.Content.ReadFromJsonAsync<MemberResponse>();
 
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
         Assert.True(body!.Id > 0);
+        Assert.Equal("Jean", body.FirstName);
+        Assert.Equal("Dupont", body.LastName);
         Assert.Equal("Jean Dupont", body.FullName);
         Assert.False(string.IsNullOrWhiteSpace(body.Token));
         Assert.EndsWith($"/card/{body.Token}", body.CardUrl);
     }
 
     [Fact]
-    public async Task CreateMember_MissingFullName_ReturnsBadRequest()
+    public async Task CreateMember_MissingLastName_ReturnsBadRequest()
     {
         using var factory = new CustomWebApplicationFactory();
         var client = factory.CreateClient();
 
-        var response = await client.PostAsJsonAsync("/api/members/", new CreateMemberRequest("   ", null));
+        var response = await client.PostAsJsonAsync("/api/members/", new CreateMemberRequest("Jean", "   ", null));
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
@@ -44,7 +46,7 @@ public class MembersEndpointsTests
         using var factory = new CustomWebApplicationFactory();
         var client = factory.CreateClient();
 
-        var created = await client.PostAsJsonAsync("/api/members/", new CreateMemberRequest("Jean Dupont", null));
+        var created = await client.PostAsJsonAsync("/api/members/", new CreateMemberRequest("Jean", "Dupont", null));
         var member = await created.Content.ReadFromJsonAsync<MemberResponse>();
 
         var qrResponse = await client.GetAsync($"/api/members/{member!.Token}/qr.png");
@@ -74,7 +76,8 @@ public class MembersEndpointsTests
         {
             db.Members.Add(new Member
             {
-                FullName = "Inactive Member",
+                FirstName = "Inactive",
+                LastName = "Member",
                 Token = "inactive-token",
                 IsActive = false,
                 CreatedAt = DateTime.UtcNow

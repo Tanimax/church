@@ -5,9 +5,9 @@ using Microsoft.EntityFrameworkCore;
 
 namespace ChurchAttendance.Endpoints;
 
-public record CreateMemberRequest(string FullName, string? Phone);
+public record CreateMemberRequest(string FirstName, string LastName, string? Phone);
 
-public record MemberResponse(int Id, string FullName, string? Phone, string Token, string CardUrl);
+public record MemberResponse(int Id, string FirstName, string LastName, string FullName, string? Phone, string Token, string CardUrl);
 
 public static class MembersEndpoints
 {
@@ -17,14 +17,15 @@ public static class MembersEndpoints
 
         group.MapPost("/", async (CreateMemberRequest request, AppDbContext db, HttpRequest httpRequest) =>
         {
-            if (string.IsNullOrWhiteSpace(request.FullName))
+            if (string.IsNullOrWhiteSpace(request.FirstName) || string.IsNullOrWhiteSpace(request.LastName))
             {
-                return Results.BadRequest(new { error = "FullName est requis." });
+                return Results.BadRequest(new { error = "FirstName et LastName sont requis." });
             }
 
             var member = new Member
             {
-                FullName = request.FullName.Trim(),
+                FirstName = request.FirstName.Trim(),
+                LastName = request.LastName.Trim(),
                 Phone = request.Phone?.Trim(),
                 Token = TokenService.GenerateToken(),
                 CreatedAt = DateTime.UtcNow
@@ -34,7 +35,7 @@ public static class MembersEndpoints
             await db.SaveChangesAsync();
 
             var baseUrl = $"{httpRequest.Scheme}://{httpRequest.Host}";
-            var response = new MemberResponse(member.Id, member.FullName, member.Phone, member.Token, $"{baseUrl}/card/{member.Token}");
+            var response = new MemberResponse(member.Id, member.FirstName, member.LastName, member.FullName, member.Phone, member.Token, $"{baseUrl}/card/{member.Token}");
 
             return Results.Created($"/api/members/{member.Id}", response);
         });

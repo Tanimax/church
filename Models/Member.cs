@@ -1,9 +1,16 @@
+using System.ComponentModel.DataAnnotations.Schema;
+
 namespace ChurchAttendance.Models;
 
 public class Member
 {
     public int Id { get; set; }
-    public required string FullName { get; set; }
+    public required string FirstName { get; set; }
+    public required string LastName { get; set; }
+
+    [NotMapped]
+    public string FullName => $"{FirstName} {LastName}";
+
     public string? Phone { get; set; }
     public string? Email { get; set; }
     public string? PhotoUrl { get; set; }
@@ -12,4 +19,21 @@ public class Member
     public DateTime CreatedAt { get; set; }
     public Gender? Gender { get; set; }
     public bool IsBaptized { get; set; }
+    public MaritalStatus? MaritalStatus { get; set; }
+
+    // Birthday is tracked as day + month only (no year) so the app can
+    // surface upcoming birthdays without storing members' ages.
+    public int? BirthDay { get; set; }
+    public int? BirthMonth { get; set; }
+
+    private static readonly string[] MonthNames =
+    [
+        "", "janvier", "février", "mars", "avril", "mai", "juin",
+        "juillet", "août", "septembre", "octobre", "novembre", "décembre"
+    ];
+
+    [NotMapped]
+    public string? BirthdayLabel => BirthDay.HasValue && BirthMonth.HasValue
+        ? $"{BirthDay} {MonthNames[BirthMonth.Value]}"
+        : null;
 }

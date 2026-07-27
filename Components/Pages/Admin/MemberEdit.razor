@@ -22,9 +22,16 @@ else
         <DataAnnotationsValidator />
         <ValidationSummary />
 
-        <div class="mb-3">
-            <label class="form-label">Nom complet</label>
-            <InputText class="form-control" @bind-Value="formModel.FullName" />
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label class="form-label">Prénom</label>
+                <InputText class="form-control" @bind-Value="formModel.FirstName" />
+            </div>
+
+            <div class="col-md-6 mb-3">
+                <label class="form-label">Nom</label>
+                <InputText class="form-control" @bind-Value="formModel.LastName" />
+            </div>
         </div>
 
         <div class="mb-3">
@@ -46,6 +53,41 @@ else
             </InputSelect>
         </div>
 
+        <div class="mb-3">
+            <label class="form-label">État matrimonial</label>
+            <InputSelect class="form-select" @bind-Value="formModel.EtatMatrimonial">
+                <option value="">-- Sélectionner --</option>
+                <option value="Celibataire">Célibataire</option>
+                <option value="Marie">Marié(e)</option>
+                <option value="Divorce">Divorcé(e)</option>
+                <option value="Veuf">Veuf(ve)</option>
+            </InputSelect>
+        </div>
+
+        <div class="row">
+            <div class="col-auto mb-3">
+                <label class="form-label">Jour de naissance (optionnel)</label>
+                <InputSelect class="form-select" @bind-Value="formModel.BirthDay">
+                    <option value="">--</option>
+                    @for (var day = 1; day <= 31; day++)
+                    {
+                        <option value="@day">@day</option>
+                    }
+                </InputSelect>
+            </div>
+
+            <div class="col-auto mb-3">
+                <label class="form-label">Mois de naissance (optionnel)</label>
+                <InputSelect class="form-select" @bind-Value="formModel.BirthMonth">
+                    <option value="">--</option>
+                    @for (var month = 1; month <= 12; month++)
+                    {
+                        <option value="@month">@MonthNames[month]</option>
+                    }
+                </InputSelect>
+            </div>
+        </div>
+
         <div class="mb-3 form-check">
             <InputCheckbox class="form-check-input" id="isBaptized" @bind-Value="formModel.IsBaptized" />
             <label class="form-check-label" for="isBaptized">Baptisé(e)</label>
@@ -57,6 +99,9 @@ else
 }
 
 @code {
+    private static readonly string[] MonthNames =
+        { "", "Janvier", "Février", "Mars", "Avril", "Mai", "Juin", "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre" };
+
     [Parameter]
     public int Id { get; set; }
 
@@ -83,11 +128,15 @@ else
 
         formModel = new MemberFormModel
         {
-            FullName = member.FullName,
+            FirstName = member.FirstName,
+            LastName = member.LastName,
             Phone = member.Phone,
             Email = member.Email,
             Sexe = member.Gender,
-            IsBaptized = member.IsBaptized
+            IsBaptized = member.IsBaptized,
+            EtatMatrimonial = member.MaritalStatus,
+            BirthDay = member.BirthDay,
+            BirthMonth = member.BirthMonth
         };
     }
 
@@ -101,24 +150,17 @@ else
             return;
         }
 
-        member.FullName = formModel!.FullName.Trim();
+        member.FirstName = formModel!.FirstName.Trim();
+        member.LastName = formModel.LastName.Trim();
         member.Phone = string.IsNullOrWhiteSpace(formModel.Phone) ? null : formModel.Phone.Trim();
         member.Email = string.IsNullOrWhiteSpace(formModel.Email) ? null : formModel.Email.Trim();
         member.Gender = formModel.Sexe;
         member.IsBaptized = formModel.IsBaptized;
+        member.MaritalStatus = formModel.EtatMatrimonial;
+        member.BirthDay = formModel.BirthDay;
+        member.BirthMonth = formModel.BirthMonth;
 
         await db.SaveChangesAsync();
         Nav.NavigateTo("/admin/members");
-    }
-
-    private class MemberFormModel
-    {
-        [Required(ErrorMessage = "Le nom est requis.")]
-        public string FullName { get; set; } = "";
-        public string? Phone { get; set; }
-        [EmailAddress(ErrorMessage = "Adresse courriel invalide.")]
-        public string? Email { get; set; }
-        public Gender? Sexe { get; set; }
-        public bool IsBaptized { get; set; }
     }
 }

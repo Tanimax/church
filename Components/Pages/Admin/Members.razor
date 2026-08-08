@@ -81,27 +81,36 @@ else
         </table>
     </div>
 
-    <div class="d-flex justify-content-between align-items-center">
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
         <span class="text-muted">
             @filteredMembers.Count membre(s) — page @currentPage sur @totalPages
         </span>
-        <div class="btn-group">
-            <button type="button" class="btn btn-outline-secondary" disabled="@(currentPage <= 1)" @onclick="() => GoToPage(currentPage - 1)">
-                ‹ Précédent
-            </button>
-            <button type="button" class="btn btn-outline-secondary" disabled="@(currentPage >= totalPages)" @onclick="() => GoToPage(currentPage + 1)">
-                Suivant ›
-            </button>
+        <div class="d-flex align-items-center gap-2">
+            <label class="text-muted mb-0" for="pageSize">Par page</label>
+            <select id="pageSize" class="form-select form-select-sm w-auto" @bind="pageSize" @bind:event="onchange" @bind:after="ResetPage">
+                <option value="10">10</option>
+                <option value="25">25</option>
+                <option value="50">50</option>
+                <option value="100">100</option>
+                <option value="@int.MaxValue">Tous</option>
+            </select>
+            <div class="btn-group">
+                <button type="button" class="btn btn-outline-secondary" disabled="@(currentPage <= 1)" @onclick="() => GoToPage(currentPage - 1)">
+                    ‹ Précédent
+                </button>
+                <button type="button" class="btn btn-outline-secondary" disabled="@(currentPage >= totalPages)" @onclick="() => GoToPage(currentPage + 1)">
+                    Suivant ›
+                </button>
+            </div>
         </div>
     </div>
 }
 
 @code {
-    private const int PageSize = 25;
-
     private List<Member>? members;
     private string searchTerm = "";
     private int currentPage = 1;
+    private int pageSize = 25;
 
     private string CardUrl(string token) => $"{Nav.BaseUri.TrimEnd('/')}/card/{token}";
 
@@ -112,10 +121,10 @@ else
                 ? members
                 : members.Where(m => m.FullName.Contains(searchTerm, StringComparison.OrdinalIgnoreCase)).ToList();
 
-    private int totalPages => Math.Max(1, (int)Math.Ceiling(filteredMembers.Count / (double)PageSize));
+    private int totalPages => Math.Max(1, (int)Math.Ceiling(filteredMembers.Count / (double)pageSize));
 
     private IEnumerable<Member> pagedMembers =>
-        filteredMembers.Skip((Math.Min(currentPage, totalPages) - 1) * PageSize).Take(PageSize);
+        filteredMembers.Skip((Math.Min(currentPage, totalPages) - 1) * pageSize).Take(pageSize);
 
     private void ResetPage() => currentPage = 1;
 

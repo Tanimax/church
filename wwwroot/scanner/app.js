@@ -58,6 +58,10 @@ function showResult(status, fullName) {
         icon.textContent = '✕';
         name.textContent = '';
         message.textContent = 'QR code inconnu';
+    } else if (status === 'not_baptized') {
+        icon.textContent = '✕';
+        name.textContent = fullName ?? '';
+        message.textContent = 'Membre non baptisé — Sainte Cène non disponible';
     } else {
         icon.textContent = '!';
         name.textContent = '';

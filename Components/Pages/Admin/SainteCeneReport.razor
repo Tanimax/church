@@ -1,5 +1,6 @@
 @page "/admin/reports/sainte-cene"
 @attribute [Authorize]
+@rendermode InteractiveServer
 @inject IDbContextFactory<AppDbContext> DbFactory
 
 <PageTitle>Rapport Sainte Cène</PageTitle>
@@ -39,7 +40,7 @@ else
                 </tr>
             </thead>
             <tbody>
-                @foreach (var row in rows)
+                @foreach (var row in pagedRows)
                 {
                     <tr>
                         <td class="text-start">@row.FullName</td>
@@ -54,6 +55,30 @@ else
             </tbody>
         </table>
     </div>
+
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <span class="text-muted">
+            @rows.Count membre(s) — page @currentPage sur @totalPages
+        </span>
+        <div class="d-flex align-items-center gap-2">
+            <label class="text-muted mb-0" for="pageSize">Par page</label>
+            <select id="pageSize" class="form-select form-select-sm w-auto" @bind="pageSize" @bind:event="onchange" @bind:after="ResetPage">
+                <option value="10">10</option>
+                <option value="25">25</option>
+                <option value="50">50</option>
+                <option value="100">100</option>
+                <option value="@int.MaxValue">Tous</option>
+            </select>
+            <div class="btn-group">
+                <button type="button" class="btn btn-outline-secondary" disabled="@(currentPage <= 1)" @onclick="() => GoToPage(currentPage - 1)">
+                    ‹ Précédent
+                </button>
+                <button type="button" class="btn btn-outline-secondary" disabled="@(currentPage >= totalPages)" @onclick="() => GoToPage(currentPage + 1)">
+                    Suivant ›
+                </button>
+            </div>
+        </div>
+    </div>
 }
 
 @code {
@@ -63,6 +88,17 @@ else
     private int selectedYear = DateTime.Today.Year;
     private List<int> availableYears = new();
     private List<MemberRow>? rows;
+    private int currentPage = 1;
+    private int pageSize = 10;
+
+    private int totalPages => Math.Max(1, (int)Math.Ceiling((rows?.Count ?? 0) / (double)pageSize));
+
+    private IEnumerable<MemberRow> pagedRows =>
+        (rows ?? []).Skip((Math.Min(currentPage, totalPages) - 1) * pageSize).Take(pageSize);
+
+    private void ResetPage() => currentPage = 1;
+
+    private void GoToPage(int page) => currentPage = Math.Clamp(page, 1, totalPages);
 
     protected override async Task OnInitializedAsync()
     {
@@ -97,6 +133,8 @@ else
                 m.FullName,
                 monthsByMember.TryGetValue(m.Id, out var months) ? months : new HashSet<int>()))
             .ToList();
+
+        ResetPage();
     }
 
     private record MemberRow(string FullName, HashSet<int> MonthsPresent);

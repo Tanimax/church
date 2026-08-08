@@ -9,7 +9,8 @@ namespace ChurchAttendance.Tests.Endpoints;
 
 public class CheckInEndpointsTests
 {
-    private static async Task<Member> SeedMemberAsync(AppDbContext db, string token = "member-token", bool isActive = true)
+    private static async Task<Member> SeedMemberAsync(
+        AppDbContext db, string token = "member-token", bool isActive = true, bool isBaptized = true)
     {
         var member = new Member
         {
@@ -17,6 +18,7 @@ public class CheckInEndpointsTests
             LastName = "Dupont",
             Token = token,
             IsActive = isActive,
+            IsBaptized = isBaptized,
             CreatedAt = DateTime.UtcNow
         };
         db.Members.Add(member);
@@ -117,6 +119,45 @@ public class CheckInEndpointsTests
         Assert.Equal(2, attendances.Count);
         Assert.Contains(attendances, a => a.Type == AttendanceType.SainteCene && a.CheckedInBy == null);
         Assert.Contains(attendances, a => a.Type == AttendanceType.Culte && a.CheckedInBy == "Auto (Sainte Cène)");
+    }
+
+    [Fact]
+    public async Task CheckIn_SainteCene_NonBaptizedMember_ReturnsNotBaptizedStatus()
+    {
+        using var factory = new CustomWebApplicationFactory();
+        await using (var db = factory.CreateDbContext())
+        {
+            await SeedMemberAsync(db, isBaptized: false);
+        }
+        var client = factory.CreateClient();
+
+        using var content = new StringContent(
+            """{"token":"member-token","type":"SainteCene"}""",
+            System.Text.Encoding.UTF8, "application/json");
+        var response = await client.PostAsync("/api/checkin", content);
+        var body = await response.Content.ReadFromJsonAsync<CheckInResponse>();
+
+        Assert.Equal("not_baptized", body!.Status);
+        Assert.Equal("Jean Dupont", body.FullName);
+
+        await using var verifyDb = factory.CreateDbContext();
+        Assert.Equal(0, await verifyDb.Attendances.CountAsync());
+    }
+
+    [Fact]
+    public async Task CheckIn_Culte_NonBaptizedMember_StillAllowed()
+    {
+        using var factory = new CustomWebApplicationFactory();
+        await using (var db = factory.CreateDbContext())
+        {
+            await SeedMemberAsync(db, isBaptized: false);
+        }
+        var client = factory.CreateClient();
+
+        var response = await client.PostAsJsonAsync("/api/checkin", new CheckInRequest("member-token"));
+        var body = await response.Content.ReadFromJsonAsync<CheckInResponse>();
+
+        Assert.Equal("ok", body!.Status);
     }
 
     [Fact]

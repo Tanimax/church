@@ -107,6 +107,10 @@ body.mode-saintecene-active #mode-toggle {
     background: #dc2626;
 }
 
+#result-overlay.not_baptized {
+    background: #7c2d12;
+}
+
 #result-overlay .icon {
     font-size: 4rem;
     margin-bottom: 1rem;

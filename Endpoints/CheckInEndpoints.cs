@@ -20,6 +20,11 @@ public static class CheckInEndpoints
                 return Results.Ok(new CheckInResponse("not_found", null, null));
             }
 
+            if (request.Type == AttendanceType.SainteCene && !member.IsBaptized)
+            {
+                return Results.Ok(new CheckInResponse("not_baptized", member.FullName, null));
+            }
+
             var today = DateOnly.FromDateTime(DateTime.Now);
             var session = await db.ServiceSessions.FirstOrDefaultAsync(s => s.Date == today);
             if (session is null)

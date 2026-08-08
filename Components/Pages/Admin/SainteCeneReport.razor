@@ -7,14 +7,21 @@
 
 <h1>Rapport Sainte Cène</h1>
 
-<div class="mb-3">
-    <label class="form-label">Année</label>
-    <select class="form-select w-auto" @bind="selectedYear" @bind:after="LoadReport">
-        @foreach (var y in availableYears)
-        {
-            <option value="@y">@y</option>
-        }
-    </select>
+<div class="d-flex flex-wrap gap-2 mb-3">
+    <div>
+        <label class="form-label">Année</label>
+        <select class="form-select w-auto" @bind="selectedYear" @bind:after="LoadReport">
+            @foreach (var y in availableYears)
+            {
+                <option value="@y">@y</option>
+            }
+        </select>
+    </div>
+    <div>
+        <label class="form-label">Rechercher</label>
+        <input type="search" class="form-control w-auto" placeholder="Rechercher par nom ou prénom..."
+               @bind="searchTerm" @bind:event="oninput" @bind:after="ResetPage" />
+    </div>
 </div>
 
 @if (rows is null)
@@ -24,6 +31,10 @@
 else if (!rows.Any())
 {
     <p class="text-muted">Aucun membre actif.</p>
+}
+else if (!filteredRows.Any())
+{
+    <p class="text-muted">Aucun membre trouvé pour cette recherche.</p>
 }
 else
 {
@@ -58,7 +69,7 @@ else
 
     <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
         <span class="text-muted">
-            @rows.Count membre(s) — page @currentPage sur @totalPages
+            @filteredRows.Count membre(s) — page @currentPage sur @totalPages
         </span>
         <div class="d-flex align-items-center gap-2">
             <label class="text-muted mb-0" for="pageSize">Par page</label>
@@ -86,15 +97,23 @@ else
         { "Jan", "Fév", "Mar", "Avr", "Mai", "Juin", "Juil", "Août", "Sep", "Oct", "Nov", "Déc" };
 
     private int selectedYear = DateTime.Today.Year;
+    private string searchTerm = "";
     private List<int> availableYears = new();
     private List<MemberRow>? rows;
     private int currentPage = 1;
     private int pageSize = 10;
 
-    private int totalPages => Math.Max(1, (int)Math.Ceiling((rows?.Count ?? 0) / (double)pageSize));
+    private List<MemberRow> filteredRows =>
+        rows is null
+            ? []
+            : string.IsNullOrWhiteSpace(searchTerm)
+                ? rows
+                : rows.Where(r => r.FullName.Contains(searchTerm, StringComparison.OrdinalIgnoreCase)).ToList();
+
+    private int totalPages => Math.Max(1, (int)Math.Ceiling(filteredRows.Count / (double)pageSize));
 
     private IEnumerable<MemberRow> pagedRows =>
-        (rows ?? []).Skip((Math.Min(currentPage, totalPages) - 1) * pageSize).Take(pageSize);
+        filteredRows.Skip((Math.Min(currentPage, totalPages) - 1) * pageSize).Take(pageSize);
 
     private void ResetPage() => currentPage = 1;
 

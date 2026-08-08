@@ -73,6 +73,30 @@ public class MemberFormModelTests
     }
 
     [Fact]
+    public void Validate_EmptyStringPhone_HasNoErrors()
+    {
+        // Blazor's InputText posts "" for a blank optional field, never null —
+        // this must be treated the same as "not provided".
+        var model = ValidModel();
+        model.Phone = "";
+
+        var results = Validate(model);
+
+        Assert.Empty(results);
+    }
+
+    [Fact]
+    public void Validate_EmptyStringEmail_HasNoErrors()
+    {
+        var model = ValidModel();
+        model.Email = "";
+
+        var results = Validate(model);
+
+        Assert.Empty(results);
+    }
+
+    [Fact]
     public void Validate_OnlyBirthDayProvided_ReportsError()
     {
         var model = ValidModel();

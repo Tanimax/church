@@ -14,10 +14,11 @@ public class MemberFormModel : IValidatableObject
     [StringLength(100, ErrorMessage = "Le nom ne peut pas dépasser 100 caractères.")]
     public string LastName { get; set; } = "";
 
-    [Phone(ErrorMessage = "Numéro de téléphone invalide.")]
+    // Validated manually in Validate() below instead of via [Phone]/[EmailAddress]:
+    // those attributes reject an empty string (as opposed to null), but Blazor's
+    // InputText always posts "" for a blank optional field, never null.
     public string? Phone { get; set; }
 
-    [EmailAddress(ErrorMessage = "Adresse courriel invalide.")]
     public string? Email { get; set; }
 
     public Gender? Sexe { get; set; }
@@ -32,6 +33,16 @@ public class MemberFormModel : IValidatableObject
 
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
+        if (!string.IsNullOrWhiteSpace(Phone) && !new PhoneAttribute().IsValid(Phone))
+        {
+            yield return new ValidationResult("Numéro de téléphone invalide.", [nameof(Phone)]);
+        }
+
+        if (!string.IsNullOrWhiteSpace(Email) && !new EmailAddressAttribute().IsValid(Email))
+        {
+            yield return new ValidationResult("Adresse courriel invalide.", [nameof(Email)]);
+        }
+
         if (BirthDay.HasValue != BirthMonth.HasValue)
         {
             yield return new ValidationResult(

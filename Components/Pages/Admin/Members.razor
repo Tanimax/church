@@ -23,50 +23,62 @@ else if (!filteredMembers.Any())
 }
 else
 {
-    <table class="table table-striped align-middle">
-        <thead>
-            <tr>
-                <th>Nom</th>
-                <th>Prénom</th>
-                <th>Naissance</th>
-                <th>Baptisé</th>
-                <th>Statut</th>
-                <th>Carte</th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach (var member in filteredMembers)
-            {
+    <div class="table-responsive">
+        <table class="table table-striped align-middle">
+            <colgroup>
+                <col style="width:12%" />
+                <col style="width:12%" />
+                <col style="width:12%" />
+                <col style="width:9%" />
+                <col style="width:10%" />
+                <col style="width:45%" />
+            </colgroup>
+            <thead>
                 <tr>
-                    <td>@member.LastName</td>
-                    <td>@member.FirstName</td>
-                    <td>@(member.BirthdayLabel ?? "—")</td>
-                    <td>@(member.IsBaptized ? "Oui" : "Non")</td>
-                    <td>
-                        @if (member.IsActive)
-                        {
-                            <span class="badge bg-success">Actif</span>
-                        }
-                        else
-                        {
-                            <span class="badge bg-secondary">Inactif</span>
-                        }
-                    </td>
-                    <td>
-                        <a href="/card/@member.Token" target="_blank">Voir la carte</a>
-                        <a href="/admin/members/edit/@member.Id" class="btn btn-sm btn-outline-secondary ms-2">Modifier</a>
-                        <button type="button" class="btn btn-sm btn-outline-secondary ms-2"
-                                data-url="@CardUrl(member.Token)" onclick="copyToClipboard(this)">
-                            Copier le lien
-                        </button>
-                        <button type="button" class="btn btn-sm btn-outline-secondary ms-2" @onclick="() => ToggleActive(member)">
-                            @(member.IsActive ? "Désactiver" : "Réactiver")
-                        </button>
-                    </td>
+                    <th>Nom</th>
+                    <th>Prénom</th>
+                    <th>Naissance</th>
+                    <th>Baptisé</th>
+                    <th>Statut</th>
+                    <th>Carte</th>
                 </tr>
-            }
-        </tbody>
-    </table>
+            </thead>
+            <tbody>
+                @foreach (var member in filteredMembers)
+                {
+                    <tr>
+                        <td>@member.LastName</td>
+                        <td>@member.FirstName</td>
+                        <td>@(member.BirthdayLabel ?? "—")</td>
+                        <td>@(member.IsBaptized ? "Oui" : "Non")</td>
+                        <td>
+                            @if (member.IsActive)
+                            {
+                                <span class="badge bg-success">Actif</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-secondary">Inactif</span>
+                            }
+                        </td>
+                        <td>
+                            <div class="d-flex flex-wrap gap-2 align-items-center">
+                                <a href="/card/@member.Token" target="_blank">Voir la carte</a>
+                                <a href="/admin/members/edit/@member.Id" class="btn btn-sm btn-outline-secondary">Modifier</a>
+                                <button type="button" class="btn btn-sm btn-outline-secondary"
+                                        data-url="@CardUrl(member.Token)" onclick="copyToClipboard(this)">
+                                    Copier le lien
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="() => ToggleActive(member)">
+                                    @(member.IsActive ? "Désactiver" : "Réactiver")
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
 }
 
 @code {

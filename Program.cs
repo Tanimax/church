@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -59,12 +60,11 @@ if (string.IsNullOrEmpty(adminPassword))
 
 builder.Configuration["AdminPassword"] = adminPassword;
 
-var connectionString = builder.Configuration.GetConnectionString("Default")
-    ?? "Data Source=churchattendance.db";
+var connectionString = BuildPostgresConnectionString(builder.Configuration);
 
 // IDbContextFactory is used by Blazor Server components, which run on a long-lived circuit
 // and must create a short-lived context per operation instead of sharing one scoped instance.
-builder.Services.AddDbContextFactory<AppDbContext>(options => options.UseSqlite(connectionString));
+builder.Services.AddDbContextFactory<AppDbContext>(options => options.UseNpgsql(connectionString));
 
 // Minimal API endpoints inject AppDbContext directly (scoped, one instance per HTTP request),
 // derived from the same factory so there's a single DbContextOptions registration.
@@ -121,6 +121,47 @@ app.MapVisitorEndpoints();
 app.MapGet("/scanner", () => Results.Redirect("/scanner/index.html"));
 
 app.Run();
+
+// Fly Postgres (managed or unmanaged) exposes DATABASE_URL as a libpq-style URI
+// (postgres://user:pass@host:port/db), not the ADO.NET keyword=value format Npgsql
+// expects — parse it when there's no explicit ConnectionStrings:Default override.
+static string BuildPostgresConnectionString(IConfiguration configuration)
+{
+    var explicitConnectionString = configuration.GetConnectionString("Default");
+    if (!string.IsNullOrEmpty(explicitConnectionString))
+    {
+        return explicitConnectionString;
+    }
+
+    var databaseUrl = Environment.GetEnvironmentVariable("DATABASE_URL");
+    if (!string.IsNullOrEmpty(databaseUrl))
+    {
+        var uri = new Uri(databaseUrl);
+        var userInfo = uri.UserInfo.Split(':', 2);
+
+        // Fly's internal Postgres (accessed over the private flycast network) doesn't
+        // offer SSL and aborts the connection outright when a client asks to negotiate
+        // it — respect the sslmode the platform put in DATABASE_URL instead of assuming.
+        var query = Microsoft.AspNetCore.WebUtilities.QueryHelpers.ParseQuery(uri.Query);
+        var sslMode = query.TryGetValue("sslmode", out var sslModeValue)
+            && Enum.TryParse<SslMode>(sslModeValue, ignoreCase: true, out var parsedSslMode)
+                ? parsedSslMode
+                : SslMode.Prefer;
+
+        var builder = new NpgsqlConnectionStringBuilder
+        {
+            Host = uri.Host,
+            Port = uri.Port > 0 ? uri.Port : 5432,
+            Username = Uri.UnescapeDataString(userInfo[0]),
+            Password = userInfo.Length > 1 ? Uri.UnescapeDataString(userInfo[1]) : "",
+            Database = uri.AbsolutePath.TrimStart('/'),
+            SslMode = sslMode
+        };
+        return builder.ConnectionString;
+    }
+
+    return "Host=localhost;Port=5432;Database=churchattendance;Username=postgres;Password=postgres";
+}
 
 // Exposed so the test project can host this app via WebApplicationFactory<Program>.
 public partial class Program;

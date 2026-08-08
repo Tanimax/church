@@ -20,7 +20,7 @@ primary_region = 'ewr'
   destination = '/data'
 
 [env]
-  ConnectionStrings__Default = 'Data Source=/data/churchattendance.db'
+  # DATABASE_URL is injected automatically by `fly mpg attach`.
   DataProtectionKeysPath = '/data/dataprotection-keys'
 
 [[vm]]

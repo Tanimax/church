@@ -9,7 +9,8 @@
 <h1>Membres</h1>
 
 <div class="d-flex justify-content-between align-items-center mb-3">
-    <input type="search" class="form-control w-auto" placeholder="Rechercher un membre..." @bind="searchTerm" @bind:event="oninput" />
+    <input type="search" class="form-control w-auto" placeholder="Rechercher un membre..."
+           @bind="searchTerm" @bind:event="oninput" @bind:after="ResetPage" />
     <a class="btn btn-primary" href="/admin/members/add">+ Ajouter un membre</a>
 </div>
 
@@ -44,7 +45,7 @@ else
                 </tr>
             </thead>
             <tbody>
-                @foreach (var member in filteredMembers)
+                @foreach (var member in pagedMembers)
                 {
                     <tr>
                         <td>@member.LastName</td>
@@ -79,20 +80,46 @@ else
             </tbody>
         </table>
     </div>
+
+    <div class="d-flex justify-content-between align-items-center">
+        <span class="text-muted">
+            @filteredMembers.Count membre(s) — page @currentPage sur @totalPages
+        </span>
+        <div class="btn-group">
+            <button type="button" class="btn btn-outline-secondary" disabled="@(currentPage <= 1)" @onclick="() => GoToPage(currentPage - 1)">
+                ‹ Précédent
+            </button>
+            <button type="button" class="btn btn-outline-secondary" disabled="@(currentPage >= totalPages)" @onclick="() => GoToPage(currentPage + 1)">
+                Suivant ›
+            </button>
+        </div>
+    </div>
 }
 
 @code {
+    private const int PageSize = 25;
+
     private List<Member>? members;
     private string searchTerm = "";
+    private int currentPage = 1;
 
     private string CardUrl(string token) => $"{Nav.BaseUri.TrimEnd('/')}/card/{token}";
 
-    private IEnumerable<Member> filteredMembers =>
+    private List<Member> filteredMembers =>
         members is null
-            ? Enumerable.Empty<Member>()
+            ? []
             : string.IsNullOrWhiteSpace(searchTerm)
                 ? members
-                : members.Where(m => m.FullName.Contains(searchTerm, StringComparison.OrdinalIgnoreCase));
+                : members.Where(m => m.FullName.Contains(searchTerm, StringComparison.OrdinalIgnoreCase)).ToList();
+
+    private int totalPages => Math.Max(1, (int)Math.Ceiling(filteredMembers.Count / (double)PageSize));
+
+    private IEnumerable<Member> pagedMembers =>
+        filteredMembers.Skip((Math.Min(currentPage, totalPages) - 1) * PageSize).Take(PageSize);
+
+    private void ResetPage() => currentPage = 1;
+
+    private void GoToPage(int page) => currentPage = Math.Clamp(page, 1, totalPages);
 
     protected override async Task OnInitializedAsync()
     {

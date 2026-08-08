@@ -28,8 +28,6 @@ else
             <tr>
                 <th>Nom</th>
                 <th>Prénom</th>
-                <th>Téléphone</th>
-                <th>Sexe</th>
                 <th>Naissance</th>
                 <th>Baptisé</th>
                 <th>Statut</th>
@@ -42,8 +40,6 @@ else
                 <tr>
                     <td>@member.LastName</td>
                     <td>@member.FirstName</td>
-                    <td>@member.Phone</td>
-                    <td>@(member.Gender?.ToString() ?? "—")</td>
                     <td>@(member.BirthdayLabel ?? "—")</td>
                     <td>@(member.IsBaptized ? "Oui" : "Non")</td>
                     <td>

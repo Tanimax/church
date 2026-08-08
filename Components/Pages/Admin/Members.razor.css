@@ -3,7 +3,7 @@
     width: 100%;
     /* Below this width, let .table-responsive scroll horizontally instead of
        squeezing columns until text wraps one letter per line. */
-    min-width: 720px;
+    min-width: 800px;
 }
 
 .table td,

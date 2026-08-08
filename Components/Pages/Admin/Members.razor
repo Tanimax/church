@@ -136,17 +136,19 @@ else
     <div class="table-responsive">
         <table class="table table-striped align-middle">
             <colgroup>
-                <col style="width:12%" />
-                <col style="width:12%" />
-                <col style="width:12%" />
-                <col style="width:9%" />
+                <col style="width:11%" />
+                <col style="width:11%" />
+                <col style="width:13%" />
                 <col style="width:10%" />
-                <col style="width:45%" />
+                <col style="width:8%" />
+                <col style="width:9%" />
+                <col style="width:38%" />
             </colgroup>
             <thead>
                 <tr>
                     <th>Nom</th>
                     <th>Prénom</th>
+                    <th>Téléphone</th>
                     <th>Naissance</th>
                     <th>Baptisé</th>
                     <th>Statut</th>
@@ -159,6 +161,7 @@ else
                     <tr>
                         <td>@member.LastName</td>
                         <td>@member.FirstName</td>
+                        <td>@member.Phone</td>
                         <td>@(member.BirthdayLabel ?? "—")</td>
                         <td>@(member.IsBaptized ? "Oui" : "Non")</td>
                         <td>

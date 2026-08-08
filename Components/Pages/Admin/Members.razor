@@ -8,9 +8,16 @@
 
 <h1>Membres</h1>
 
-<div class="d-flex justify-content-between align-items-center mb-3">
-    <input type="search" class="form-control w-auto" placeholder="Rechercher un membre..."
-           @bind="searchTerm" @bind:event="oninput" @bind:after="ResetPage" />
+<div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+    <div class="d-flex flex-wrap gap-2">
+        <input type="search" class="form-control w-auto" placeholder="Rechercher par nom ou prénom..."
+               @bind="searchTerm" @bind:event="oninput" @bind:after="ResetPage" />
+        <select id="baptizedFilter" class="form-select w-auto" @bind="baptizedFilterValue" @bind:after="ResetPage">
+            <option value="">Tous (baptisé ou non)</option>
+            <option value="true">Baptisé(e)</option>
+            <option value="false">Non baptisé(e)</option>
+        </select>
+    </div>
     <a class="btn btn-primary" href="/admin/members/add">+ Ajouter un membre</a>
 </div>
 
@@ -109,17 +116,26 @@ else
 @code {
     private List<Member>? members;
     private string searchTerm = "";
+    private string baptizedFilterValue = "";
     private int currentPage = 1;
     private int pageSize = 25;
 
     private string CardUrl(string token) => $"{Nav.BaseUri.TrimEnd('/')}/card/{token}";
 
+    private bool? baptizedFilter => baptizedFilterValue switch
+    {
+        "true" => true,
+        "false" => false,
+        _ => null
+    };
+
     private List<Member> filteredMembers =>
         members is null
             ? []
-            : string.IsNullOrWhiteSpace(searchTerm)
-                ? members
-                : members.Where(m => m.FullName.Contains(searchTerm, StringComparison.OrdinalIgnoreCase)).ToList();
+            : members
+                .Where(m => string.IsNullOrWhiteSpace(searchTerm) || m.FullName.Contains(searchTerm, StringComparison.OrdinalIgnoreCase))
+                .Where(m => baptizedFilter is null || m.IsBaptized == baptizedFilter)
+                .ToList();
 
     private int totalPages => Math.Max(1, (int)Math.Ceiling(filteredMembers.Count / (double)pageSize));
 

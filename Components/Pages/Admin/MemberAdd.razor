@@ -36,26 +36,6 @@
             <InputText type="email" class="form-control" @bind-Value="formModel!.Email" />
         </div>
 
-        <div class="mb-3">
-            <label class="form-label">Sexe</label>
-            <InputSelect class="form-select" @bind-Value="formModel!.Sexe">
-                <option value="">-- Sélectionner --</option>
-                <option value="Homme">Homme</option>
-                <option value="Femme">Femme</option>
-            </InputSelect>
-        </div>
-
-        <div class="mb-3">
-            <label class="form-label">État matrimonial</label>
-            <InputSelect class="form-select" @bind-Value="formModel!.EtatMatrimonial">
-                <option value="">-- Sélectionner --</option>
-                <option value="Celibataire">Célibataire</option>
-                <option value="Marie">Marié(e)</option>
-                <option value="Divorce">Divorcé(e)</option>
-                <option value="Veuf">Veuf(ve)</option>
-            </InputSelect>
-        </div>
-
         <div class="row">
             <div class="col-auto mb-3">
                 <label class="form-label">Jour de naissance (optionnel)</label>
@@ -134,9 +114,7 @@ else
             Email = string.IsNullOrWhiteSpace(formModel.Email) ? null : formModel.Email.Trim(),
             Token = TokenService.GenerateToken(),
             CreatedAt = DateTime.UtcNow,
-            Gender = formModel.Sexe,
             IsBaptized = formModel.IsBaptized,
-            MaritalStatus = formModel.EtatMatrimonial,
             BirthDay = formModel.BirthDay,
             BirthMonth = formModel.BirthMonth
         };

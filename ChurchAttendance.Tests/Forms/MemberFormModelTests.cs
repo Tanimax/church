@@ -1,6 +1,5 @@
 using System.ComponentModel.DataAnnotations;
 using ChurchAttendance.Components.Pages.Admin;
-using ChurchAttendance.Models;
 
 namespace ChurchAttendance.Tests.Forms;
 
@@ -170,15 +169,4 @@ public class MemberFormModelTests
         Assert.Empty(results);
     }
 
-    [Fact]
-    public void Validate_MaritalStatusAndGenderOptional_HasNoErrors()
-    {
-        var model = ValidModel();
-        model.Sexe = Gender.Femme;
-        model.EtatMatrimonial = MaritalStatus.Marie;
-
-        var results = Validate(model);
-
-        Assert.Empty(results);
-    }
 }

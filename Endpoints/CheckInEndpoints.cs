@@ -6,7 +6,7 @@ namespace ChurchAttendance.Endpoints;
 
 public record CheckInRequest(string Token, AttendanceType Type = AttendanceType.Culte);
 
-public record CheckInResponse(string Status, string? FullName, string? PhotoUrl, DateTime? CheckedInAt);
+public record CheckInResponse(string Status, string? FullName, DateTime? CheckedInAt);
 
 public static class CheckInEndpoints
 {
@@ -17,7 +17,7 @@ public static class CheckInEndpoints
             var member = await db.Members.FirstOrDefaultAsync(m => m.Token == request.Token && m.IsActive);
             if (member is null)
             {
-                return Results.Ok(new CheckInResponse("not_found", null, null, null));
+                return Results.Ok(new CheckInResponse("not_found", null, null));
             }
 
             var today = DateOnly.FromDateTime(DateTime.Now);
@@ -55,7 +55,7 @@ public static class CheckInEndpoints
 
         if (existing is not null)
         {
-            return new CheckInResponse("duplicate", member.FullName, member.PhotoUrl, existing.CheckedInAt);
+            return new CheckInResponse("duplicate", member.FullName, existing.CheckedInAt);
         }
 
         var attendance = new Attendance
@@ -76,9 +76,9 @@ public static class CheckInEndpoints
         {
             var raced = await db.Attendances
                 .FirstOrDefaultAsync(a => a.MemberId == member.Id && a.ServiceSessionId == session.Id && a.Type == type);
-            return new CheckInResponse("duplicate", member.FullName, member.PhotoUrl, raced?.CheckedInAt);
+            return new CheckInResponse("duplicate", member.FullName, raced?.CheckedInAt);
         }
 
-        return new CheckInResponse("ok", member.FullName, member.PhotoUrl, attendance.CheckedInAt);
+        return new CheckInResponse("ok", member.FullName, attendance.CheckedInAt);
     }
 }

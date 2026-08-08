@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace ChurchAttendance.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260808042450_InitialCreate")]
+    [Migration("20260808122043_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -82,9 +82,6 @@ namespace ChurchAttendance.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<int?>("Gender")
-                        .HasColumnType("integer");
-
                     b.Property<bool>("IsActive")
                         .HasColumnType("boolean");
 
@@ -95,13 +92,7 @@ namespace ChurchAttendance.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<int?>("MaritalStatus")
-                        .HasColumnType("integer");
-
                     b.Property<string>("Phone")
-                        .HasColumnType("text");
-
-                    b.Property<string>("PhotoUrl")
                         .HasColumnType("text");
 
                     b.Property<string>("Token")

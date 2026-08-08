@@ -1,5 +1,4 @@
 using System.ComponentModel.DataAnnotations;
-using ChurchAttendance.Models;
 
 namespace ChurchAttendance.Components.Pages.Admin;
 
@@ -21,9 +20,7 @@ public class MemberFormModel : IValidatableObject
 
     public string? Email { get; set; }
 
-    public Gender? Sexe { get; set; }
     public bool IsBaptized { get; set; }
-    public MaritalStatus? EtatMatrimonial { get; set; }
 
     [Range(1, 31, ErrorMessage = "Le jour de naissance doit être entre 1 et 31.")]
     public int? BirthDay { get; set; }

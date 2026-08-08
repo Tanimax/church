@@ -22,13 +22,10 @@ namespace ChurchAttendance.Migrations
                     LastName = table.Column<string>(type: "text", nullable: false),
                     Phone = table.Column<string>(type: "text", nullable: true),
                     Email = table.Column<string>(type: "text", nullable: true),
-                    PhotoUrl = table.Column<string>(type: "text", nullable: true),
                     Token = table.Column<string>(type: "text", nullable: false),
                     IsActive = table.Column<bool>(type: "boolean", nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    Gender = table.Column<int>(type: "integer", nullable: true),
                     IsBaptized = table.Column<bool>(type: "boolean", nullable: false),
-                    MaritalStatus = table.Column<int>(type: "integer", nullable: true),
                     BirthDay = table.Column<int>(type: "integer", nullable: true),
                     BirthMonth = table.Column<int>(type: "integer", nullable: true)
                 },

@@ -44,26 +44,6 @@ else
             <InputText type="email" class="form-control" @bind-Value="formModel.Email" />
         </div>
 
-        <div class="mb-3">
-            <label class="form-label">Sexe</label>
-            <InputSelect class="form-select" @bind-Value="formModel.Sexe">
-                <option value="">-- Sélectionner --</option>
-                <option value="Homme">Homme</option>
-                <option value="Femme">Femme</option>
-            </InputSelect>
-        </div>
-
-        <div class="mb-3">
-            <label class="form-label">État matrimonial</label>
-            <InputSelect class="form-select" @bind-Value="formModel.EtatMatrimonial">
-                <option value="">-- Sélectionner --</option>
-                <option value="Celibataire">Célibataire</option>
-                <option value="Marie">Marié(e)</option>
-                <option value="Divorce">Divorcé(e)</option>
-                <option value="Veuf">Veuf(ve)</option>
-            </InputSelect>
-        </div>
-
         <div class="row">
             <div class="col-auto mb-3">
                 <label class="form-label">Jour de naissance (optionnel)</label>
@@ -132,9 +112,7 @@ else
             LastName = member.LastName,
             Phone = member.Phone,
             Email = member.Email,
-            Sexe = member.Gender,
             IsBaptized = member.IsBaptized,
-            EtatMatrimonial = member.MaritalStatus,
             BirthDay = member.BirthDay,
             BirthMonth = member.BirthMonth
         };
@@ -154,9 +132,7 @@ else
         member.LastName = formModel.LastName.Trim();
         member.Phone = string.IsNullOrWhiteSpace(formModel.Phone) ? null : formModel.Phone.Trim();
         member.Email = string.IsNullOrWhiteSpace(formModel.Email) ? null : formModel.Email.Trim();
-        member.Gender = formModel.Sexe;
         member.IsBaptized = formModel.IsBaptized;
-        member.MaritalStatus = formModel.EtatMatrimonial;
         member.BirthDay = formModel.BirthDay;
         member.BirthMonth = formModel.BirthMonth;
 

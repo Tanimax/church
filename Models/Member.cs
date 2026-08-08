@@ -13,13 +13,10 @@ public class Member
 
     public string? Phone { get; set; }
     public string? Email { get; set; }
-    public string? PhotoUrl { get; set; }
     public required string Token { get; set; }
     public bool IsActive { get; set; } = true;
     public DateTime CreatedAt { get; set; }
-    public Gender? Gender { get; set; }
     public bool IsBaptized { get; set; }
-    public MaritalStatus? MaritalStatus { get; set; }
 
     // Birthday is tracked as day + month only (no year) so the app can
     // surface upcoming birthdays without storing members' ages.

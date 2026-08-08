@@ -12,7 +12,8 @@ public static class AuthEndpoints
         app.MapGet("/admin/login", (HttpRequest request) =>
         {
             var hasError = request.Query.ContainsKey("error");
-            return Results.Text(BuildLoginHtml(hasError), "text/html");
+            var returnUrl = request.Query["returnUrl"].ToString();
+            return Results.Text(BuildLoginHtml(hasError, returnUrl), "text/html");
         });
 
         app.MapPost("/admin/login", async (HttpContext context, IConfiguration config) =>
@@ -20,10 +21,16 @@ public static class AuthEndpoints
             var form = await context.Request.ReadFormAsync();
             var password = form["password"].ToString();
             var expectedPassword = config["AdminPassword"];
+            var returnUrl = form["returnUrl"].ToString();
 
             if (string.IsNullOrEmpty(expectedPassword) || password != expectedPassword)
             {
-                return Results.Redirect("/admin/login?error=1");
+                var retry = "/admin/login?error=1";
+                if (IsSafeLocalReturnUrl(returnUrl))
+                {
+                    retry += $"&returnUrl={Uri.EscapeDataString(returnUrl)}";
+                }
+                return Results.Redirect(retry);
             }
 
             var claims = new List<Claim> { new(ClaimTypes.Name, "admin") };
@@ -33,7 +40,7 @@ public static class AuthEndpoints
                 new ClaimsPrincipal(identity),
                 new AuthenticationProperties { IsPersistent = true, ExpiresUtc = DateTimeOffset.UtcNow.AddDays(30) });
 
-            return Results.Redirect("/admin/members");
+            return Results.Redirect(IsSafeLocalReturnUrl(returnUrl) ? returnUrl : "/admin/members");
         });
 
         app.MapPost("/admin/logout", async (HttpContext context) =>
@@ -43,10 +50,19 @@ public static class AuthEndpoints
         });
     }
 
-    private static string BuildLoginHtml(bool hasError)
+    // Only allow redirecting back to a same-site path after login (never a full URL),
+    // otherwise a crafted returnUrl could send an admin's session to an attacker's site.
+    private static bool IsSafeLocalReturnUrl(string? returnUrl) =>
+        !string.IsNullOrEmpty(returnUrl) && returnUrl.StartsWith('/') && !returnUrl.StartsWith("//");
+
+    private static string BuildLoginHtml(bool hasError, string? returnUrl = null)
     {
         var errorHtml = hasError
             ? "<p class=\"error\">Mot de passe incorrect.</p>"
+            : "";
+
+        var returnUrlInput = IsSafeLocalReturnUrl(returnUrl)
+            ? $"""<input type="hidden" name="returnUrl" value="{WebUtility.HtmlEncode(returnUrl)}" />"""
             : "";
 
         return $$"""
@@ -70,6 +86,7 @@ public static class AuthEndpoints
                     <h3>Connexion admin</h3>
                     {{errorHtml}}
                     <form method="post" action="/admin/login">
+                        {{returnUrlInput}}
                         <label for="password">Mot de passe</label>
                         <input type="password" id="password" name="password" required autofocus />
                         <button type="submit">Se connecter</button>

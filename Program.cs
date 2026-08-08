@@ -107,6 +107,20 @@ app.UseAuthorization();
 
 app.UseAntiforgery();
 
+// The scanner is served as static files, so [Authorize] never applies to it — gate it
+// here instead, before static file serving, since anyone with the URL could otherwise
+// use it to record attendance without being an admin.
+app.Use(async (context, next) =>
+{
+    if (context.Request.Path.StartsWithSegments("/scanner") && context.User.Identity?.IsAuthenticated != true)
+    {
+        var returnUrl = context.Request.Path + context.Request.QueryString;
+        context.Response.Redirect($"/admin/login?returnUrl={Uri.EscapeDataString(returnUrl)}");
+        return;
+    }
+    await next();
+});
+
 app.MapStaticAssets();
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();

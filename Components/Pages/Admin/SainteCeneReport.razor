@@ -30,7 +30,7 @@
 }
 else if (!rows.Any())
 {
-    <p class="text-muted">Aucun membre actif.</p>
+    <p class="text-muted">Aucun membre baptisé actif.</p>
 }
 else if (!filteredRows.Any())
 {
@@ -142,7 +142,7 @@ else
             .ToDictionary(g => g.Key, g => g.Select(a => a.Month).ToHashSet());
 
         var members = await db.Members
-            .Where(m => m.IsActive)
+            .Where(m => m.IsActive && m.IsBaptized)
             .OrderBy(m => m.LastName)
             .ThenBy(m => m.FirstName)
             .ToListAsync();

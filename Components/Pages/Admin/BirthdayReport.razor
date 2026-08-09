@@ -56,8 +56,10 @@ else
     private DateOnly selectedSunday = GetMostRecentSunday();
     private List<(DateOnly Date, Member Member)>? matches;
 
-    private DateOnly WeekStart => selectedSunday;
-    private DateOnly WeekEnd => selectedSunday.AddDays(6);
+    // "La semaine incluant le dimanche du rapport" means the week leading up to and
+    // ending on that Sunday (Monday through Sunday), not the week starting from it.
+    private DateOnly WeekStart => selectedSunday.AddDays(-6);
+    private DateOnly WeekEnd => selectedSunday;
 
     protected override async Task OnInitializedAsync() => await LoadReport();
 

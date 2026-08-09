@@ -6,20 +6,6 @@ namespace ChurchAttendance.Tests.Endpoints;
 
 public class ScannerAccessTests
 {
-    private const string DevAdminPassword = "dev-only-password";
-
-    private static async Task<HttpClient> CreateAuthenticatedClientAsync(CustomWebApplicationFactory factory)
-    {
-        var client = factory.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
-        using var loginForm = new FormUrlEncodedContent(new Dictionary<string, string>
-        {
-            ["password"] = DevAdminPassword
-        });
-        var loginResponse = await client.PostAsync("/admin/login", loginForm);
-        Assert.Equal(HttpStatusCode.Redirect, loginResponse.StatusCode);
-        return client;
-    }
-
     [Fact]
     public async Task Scanner_WithoutAuthentication_RedirectsToLogin()
     {
@@ -59,7 +45,7 @@ public class ScannerAccessTests
     public async Task Scanner_Authenticated_ReachesTheRealPage()
     {
         using var factory = new CustomWebApplicationFactory();
-        var client = await CreateAuthenticatedClientAsync(factory);
+        var client = await TestAuth.CreateAuthenticatedClientAsync(factory);
 
         var response = await client.GetAsync("/scanner");
 
@@ -73,7 +59,7 @@ public class ScannerAccessTests
     public async Task ScannerStaticAsset_Authenticated_ReturnsOk()
     {
         using var factory = new CustomWebApplicationFactory();
-        var client = await CreateAuthenticatedClientAsync(factory);
+        var client = await TestAuth.CreateAuthenticatedClientAsync(factory);
 
         var response = await client.GetAsync("/scanner/index.html");
 
@@ -88,7 +74,8 @@ public class ScannerAccessTests
 
         using var loginForm = new FormUrlEncodedContent(new Dictionary<string, string>
         {
-            ["password"] = DevAdminPassword,
+            ["username"] = TestAuth.BootstrapAdminUsername,
+            ["password"] = TestAuth.BootstrapAdminPassword,
             ["returnUrl"] = "/scanner"
         });
         var response = await client.PostAsync("/admin/login", loginForm);
@@ -105,7 +92,8 @@ public class ScannerAccessTests
 
         using var loginForm = new FormUrlEncodedContent(new Dictionary<string, string>
         {
-            ["password"] = DevAdminPassword,
+            ["username"] = TestAuth.BootstrapAdminUsername,
+            ["password"] = TestAuth.BootstrapAdminPassword,
             ["returnUrl"] = "https://evil.example.com/phish"
         });
         var response = await client.PostAsync("/admin/login", loginForm);

@@ -1,0 +1,193 @@
+@page "/admin/users"
+@attribute [Authorize]
+@rendermode InteractiveServer
+@using System.ComponentModel.DataAnnotations
+@using Microsoft.EntityFrameworkCore
+@inject IDbContextFactory<AppDbContext> DbFactory
+
+<PageTitle>Utilisateurs</PageTitle>
+
+<h1>Utilisateurs</h1>
+
+<AuthorizeView Roles="Admin" Context="authContext">
+    <Authorized>
+        <div class="mb-3">
+            <button type="button" class="btn btn-primary" @onclick="OpenAddModal">+ Ajouter un utilisateur</button>
+        </div>
+    </Authorized>
+</AuthorizeView>
+
+@if (showAddModal)
+{
+    <div class="modal fade show d-block" tabindex="-1" role="dialog" @onclick="CloseAddModal">
+        <div class="modal-dialog" role="document" @onclick:stopPropagation="true">
+            <div class="modal-content">
+                <EditForm Model="addFormModel" OnValidSubmit="HandleAddSubmit">
+                    <DataAnnotationsValidator />
+                    <div class="modal-header">
+                        <h5 class="modal-title">Ajouter un utilisateur</h5>
+                        <button type="button" class="btn-close" aria-label="Fermer" @onclick="CloseAddModal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <ValidationSummary />
+                        @if (!string.IsNullOrWhiteSpace(addError))
+                        {
+                            <div class="alert alert-danger">@addError</div>
+                        }
+
+                        <div class="mb-3">
+                            <label class="form-label">Nom d'utilisateur</label>
+                            <InputText class="form-control" @bind-Value="addFormModel.Username" autocomplete="off" />
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Mot de passe</label>
+                            <InputText type="password" class="form-control" @bind-Value="addFormModel.Password" autocomplete="new-password" />
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Rôle</label>
+                            <InputSelect class="form-select" @bind-Value="addFormModel.Role">
+                                <option value="Secretaire">Secrétaire</option>
+                                <option value="Admin">Administrateur</option>
+                            </InputSelect>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-link" @onclick="CloseAddModal">Annuler</button>
+                        <button type="submit" class="btn btn-primary">Créer l'utilisateur</button>
+                    </div>
+                </EditForm>
+            </div>
+        </div>
+    </div>
+    <div class="modal-backdrop fade show"></div>
+}
+
+@if (users is null)
+{
+    <p><em>Chargement...</em></p>
+}
+else
+{
+    <div class="table-responsive">
+        <table class="table table-striped align-middle">
+            <thead>
+                <tr>
+                    <th>Nom d'utilisateur</th>
+                    <th>Rôle</th>
+                    <th>Statut</th>
+                    <th>Créé le</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var user in users)
+                {
+                    <tr>
+                        <td>@user.Username</td>
+                        <td>@(user.Role == UserRole.Admin ? "Administrateur" : "Secrétaire")</td>
+                        <td>
+                            @if (user.IsActive)
+                            {
+                                <span class="badge bg-success">Actif</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-secondary">Inactif</span>
+                            }
+                        </td>
+                        <td>@user.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy")</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+
+@code {
+    [CascadingParameter]
+    private Task<AuthenticationState>? AuthenticationStateTask { get; set; }
+
+    private List<User>? users;
+    private bool showAddModal;
+    private AddUserFormModel addFormModel = new();
+    private string? addError;
+
+    protected override async Task OnInitializedAsync() => await LoadUsers();
+
+    private async Task LoadUsers()
+    {
+        await using var db = await DbFactory.CreateDbContextAsync();
+        users = await db.Users.OrderBy(u => u.Username).ToListAsync();
+    }
+
+    private async Task<bool> CurrentUserIsAdminAsync()
+    {
+        if (AuthenticationStateTask is null)
+        {
+            return false;
+        }
+        var authState = await AuthenticationStateTask;
+        return authState.User.IsInRole(nameof(UserRole.Admin));
+    }
+
+    private async Task OpenAddModal()
+    {
+        // The button is already hidden from non-admins via AuthorizeView, but don't rely
+        // on that alone — verify server-side too before opening the mutating form.
+        if (!await CurrentUserIsAdminAsync())
+        {
+            return;
+        }
+
+        addFormModel = new AddUserFormModel();
+        addError = null;
+        showAddModal = true;
+    }
+
+    private void CloseAddModal() => showAddModal = false;
+
+    private async Task HandleAddSubmit()
+    {
+        if (!await CurrentUserIsAdminAsync())
+        {
+            addError = "Seul un administrateur peut ajouter un utilisateur.";
+            return;
+        }
+
+        await using var db = await DbFactory.CreateDbContextAsync();
+
+        var normalizedUsername = UserService.NormalizeUsername(addFormModel.Username);
+        var alreadyExists = await db.Users.AnyAsync(u => u.Username == normalizedUsername);
+        if (alreadyExists)
+        {
+            addError = "Ce nom d'utilisateur existe déjà.";
+            return;
+        }
+
+        db.Users.Add(new User
+        {
+            Username = normalizedUsername,
+            PasswordHash = UserService.HashPassword(addFormModel.Password),
+            Role = addFormModel.Role,
+            CreatedAt = DateTime.UtcNow
+        });
+        await db.SaveChangesAsync();
+
+        showAddModal = false;
+        await LoadUsers();
+    }
+
+    private class AddUserFormModel
+    {
+        [Required(ErrorMessage = "Le nom d'utilisateur est requis.")]
+        [StringLength(50, ErrorMessage = "Le nom d'utilisateur ne peut pas dépasser 50 caractères.")]
+        public string Username { get; set; } = "";
+
+        [Required(ErrorMessage = "Le mot de passe est requis.")]
+        [MinLength(8, ErrorMessage = "Le mot de passe doit contenir au moins 8 caractères.")]
+        public string Password { get; set; } = "";
+
+        public UserRole Role { get; set; } = UserRole.Secretaire;
+    }
+}

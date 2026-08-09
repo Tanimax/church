@@ -9,6 +9,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<ServiceSession> ServiceSessions => Set<ServiceSession>();
     public DbSet<Attendance> Attendances => Set<Attendance>();
     public DbSet<Visitor> Visitors => Set<Visitor>();
+    public DbSet<User> Users => Set<User>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -22,6 +23,10 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 
         modelBuilder.Entity<Attendance>()
             .HasIndex(a => new { a.MemberId, a.ServiceSessionId, a.Type })
+            .IsUnique();
+
+        modelBuilder.Entity<User>()
+            .HasIndex(u => u.Username)
             .IsUnique();
     }
 }

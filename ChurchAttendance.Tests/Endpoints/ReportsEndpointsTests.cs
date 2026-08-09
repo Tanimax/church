@@ -8,23 +8,6 @@ namespace ChurchAttendance.Tests.Endpoints;
 
 public class ReportsEndpointsTests
 {
-    // Program.cs falls back to this password in the Development environment
-    // (which CustomWebApplicationFactory always uses) when ADMIN_PASSWORD isn't set.
-    private const string DevAdminPassword = "dev-only-password";
-
-    private static async Task<HttpClient> CreateAuthenticatedClientAsync(CustomWebApplicationFactory factory)
-    {
-        var client = factory.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
-        using var loginForm = new FormUrlEncodedContent(new Dictionary<string, string>
-        {
-            ["password"] = DevAdminPassword
-        });
-        var loginResponse = await client.PostAsync("/admin/login", loginForm);
-        Assert.Equal(HttpStatusCode.Redirect, loginResponse.StatusCode);
-        Assert.Equal("/admin/members", loginResponse.Headers.Location?.ToString());
-        return client;
-    }
-
     [Fact]
     public async Task ExportCsv_WithoutAuthentication_RedirectsToLogin()
     {
@@ -41,7 +24,7 @@ public class ReportsEndpointsTests
     public async Task ExportCsv_Authenticated_ReturnsCsvWithHeaderRow()
     {
         using var factory = new CustomWebApplicationFactory();
-        var client = await CreateAuthenticatedClientAsync(factory);
+        var client = await TestAuth.CreateAuthenticatedClientAsync(factory);
 
         var response = await client.GetAsync("/admin/reports/export.csv");
         var csv = await response.Content.ReadAsStringAsync();
@@ -72,7 +55,7 @@ public class ReportsEndpointsTests
             await db.SaveChangesAsync();
         }
 
-        var client = await CreateAuthenticatedClientAsync(factory);
+        var client = await TestAuth.CreateAuthenticatedClientAsync(factory);
         var response = await client.GetAsync("/admin/reports/export.csv");
         var csv = await response.Content.ReadAsStringAsync();
         var dataLines = csv.Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries).Skip(1).ToArray();

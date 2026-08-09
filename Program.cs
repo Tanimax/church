@@ -2,6 +2,7 @@ using System.Text.Json.Serialization;
 using ChurchAttendance.Components;
 using ChurchAttendance.Data;
 using ChurchAttendance.Endpoints;
+using ChurchAttendance.Models;
 using ChurchAttendance.Services;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.DataProtection;
@@ -42,6 +43,8 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
     });
 builder.Services.AddAuthorization();
 
+// Only used to seed the very first "admin" account below — after that, credentials
+// live in the Users table and this variable is no longer consulted.
 var adminPassword = builder.Configuration["AdminPassword"]
     ?? Environment.GetEnvironmentVariable("ADMIN_PASSWORD");
 
@@ -57,8 +60,6 @@ if (string.IsNullOrEmpty(adminPassword))
         throw new InvalidOperationException("La variable d'environnement ADMIN_PASSWORD doit être définie en production.");
     }
 }
-
-builder.Configuration["AdminPassword"] = adminPassword;
 
 var connectionString = BuildPostgresConnectionString(builder.Configuration);
 
@@ -79,6 +80,22 @@ using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     db.Database.Migrate();
+
+    // One-time bootstrap: the app used to gate the whole admin area behind a single
+    // shared ADMIN_PASSWORD. The first time this runs against a database with no user
+    // accounts yet, create an "admin" account with that same password so existing
+    // deployments keep working without any manual step.
+    if (!await db.Users.AnyAsync())
+    {
+        db.Users.Add(new User
+        {
+            Username = UserService.NormalizeUsername("admin"),
+            PasswordHash = UserService.HashPassword(adminPassword),
+            Role = UserRole.Admin,
+            CreatedAt = DateTime.UtcNow
+        });
+        await db.SaveChangesAsync();
+    }
 }
 
 // Fly.io terminates TLS at its edge proxy and forwards plain HTTP to the container,

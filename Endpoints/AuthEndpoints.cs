@@ -1,7 +1,10 @@
 using System.Net;
 using System.Security.Claims;
+using ChurchAttendance.Data;
+using ChurchAttendance.Services;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.EntityFrameworkCore;
 
 namespace ChurchAttendance.Endpoints;
 
@@ -16,14 +19,15 @@ public static class AuthEndpoints
             return Results.Text(BuildLoginHtml(hasError, returnUrl), "text/html");
         });
 
-        app.MapPost("/admin/login", async (HttpContext context, IConfiguration config) =>
+        app.MapPost("/admin/login", async (HttpContext context, AppDbContext db) =>
         {
             var form = await context.Request.ReadFormAsync();
+            var username = UserService.NormalizeUsername(form["username"].ToString());
             var password = form["password"].ToString();
-            var expectedPassword = config["AdminPassword"];
             var returnUrl = form["returnUrl"].ToString();
 
-            if (string.IsNullOrEmpty(expectedPassword) || password != expectedPassword)
+            var user = await db.Users.FirstOrDefaultAsync(u => u.Username == username && u.IsActive);
+            if (user is null || !UserService.VerifyPassword(user.PasswordHash, password))
             {
                 var retry = "/admin/login?error=1";
                 if (IsSafeLocalReturnUrl(returnUrl))
@@ -33,7 +37,11 @@ public static class AuthEndpoints
                 return Results.Redirect(retry);
             }
 
-            var claims = new List<Claim> { new(ClaimTypes.Name, "admin") };
+            var claims = new List<Claim>
+            {
+                new(ClaimTypes.Name, user.Username),
+                new(ClaimTypes.Role, user.Role.ToString())
+            };
             var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
             await context.SignInAsync(
                 CookieAuthenticationDefaults.AuthenticationScheme,
@@ -58,7 +66,7 @@ public static class AuthEndpoints
     private static string BuildLoginHtml(bool hasError, string? returnUrl = null)
     {
         var errorHtml = hasError
-            ? "<p class=\"error\">Mot de passe incorrect.</p>"
+            ? "<p class=\"error\">Nom d'utilisateur ou mot de passe incorrect.</p>"
             : "";
 
         var returnUrlInput = IsSafeLocalReturnUrl(returnUrl)
@@ -77,7 +85,7 @@ public static class AuthEndpoints
                     body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f4f6f8; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; padding: 1rem; }
                     .card { background: #fff; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); padding: 1.5rem; max-width: 340px; width: 100%; }
                     label { display: block; margin-bottom: 0.4rem; font-weight: 500; }
-                    input[type="password"] { width: 100%; padding: 0.75rem; border: 1px solid #ccc; border-radius: 6px; font-size: 16px; margin-bottom: 1rem; }
+                    input[type="text"], input[type="password"] { width: 100%; padding: 0.75rem; border: 1px solid #ccc; border-radius: 6px; font-size: 16px; margin-bottom: 1rem; }
                     button { width: 100%; padding: 0.75rem; background: #2c3e50; color: #fff; border: none; border-radius: 6px; font-size: 1rem; cursor: pointer; }
                     .error { color: #dc2626; }
                 </style>
@@ -88,8 +96,10 @@ public static class AuthEndpoints
                     {{errorHtml}}
                     <form method="post" action="/admin/login">
                         {{returnUrlInput}}
+                        <label for="username">Nom d'utilisateur</label>
+                        <input type="text" id="username" name="username" required autofocus autocapitalize="none" autocomplete="username" />
                         <label for="password">Mot de passe</label>
-                        <input type="password" id="password" name="password" required autofocus />
+                        <input type="password" id="password" name="password" required autocomplete="current-password" />
                         <button type="submit">Se connecter</button>
                     </form>
                 </div>

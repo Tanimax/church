@@ -11,6 +11,9 @@
     <Compile Remove="ChurchAttendance.Tests/**/*.cs" />
     <Content Remove="ChurchAttendance.Tests/**/*" />
     <None Remove="ChurchAttendance.Tests/**/*" />
+    <Compile Remove="ChurchAttendance.E2ETests/**/*.cs" />
+    <Content Remove="ChurchAttendance.E2ETests/**/*" />
+    <None Remove="ChurchAttendance.E2ETests/**/*" />
   </ItemGroup>
 
   <ItemGroup>

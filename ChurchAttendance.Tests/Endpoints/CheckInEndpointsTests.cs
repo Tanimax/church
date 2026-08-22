@@ -161,6 +161,30 @@ public class CheckInEndpointsTests
     }
 
     [Fact]
+    public async Task CheckIn_EcoleDominicale_NonBaptizedMember_StillAllowedAndDoesNotAutoRecordCulte()
+    {
+        using var factory = new CustomWebApplicationFactory();
+        await using (var db = factory.CreateDbContext())
+        {
+            await SeedMemberAsync(db, isBaptized: false);
+        }
+        var client = factory.CreateClient();
+
+        using var content = new StringContent(
+            """{"token":"member-token","type":"EcoleDominicale"}""",
+            System.Text.Encoding.UTF8, "application/json");
+        var response = await client.PostAsync("/api/checkin", content);
+        var body = await response.Content.ReadFromJsonAsync<CheckInResponse>();
+
+        Assert.Equal("ok", body!.Status);
+
+        await using var verifyDb = factory.CreateDbContext();
+        var attendances = await verifyDb.Attendances.ToListAsync();
+        Assert.Single(attendances);
+        Assert.Equal(AttendanceType.EcoleDominicale, attendances[0].Type);
+    }
+
+    [Fact]
     public async Task CheckIn_SainteCeneAfterCulteAlreadyRecorded_DoesNotDuplicateCulte()
     {
         using var factory = new CustomWebApplicationFactory();

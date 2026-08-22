@@ -1,6 +1,8 @@
 let html5QrCode;
 let isProcessing = false;
-let currentMode = localStorage.getItem('scanMode') === 'SainteCene' ? 'SainteCene' : 'Culte';
+const validModes = ['Culte', 'SainteCene', 'EcoleDominicale'];
+const savedMode = localStorage.getItem('scanMode');
+let currentMode = validModes.includes(savedMode) ? savedMode : 'Culte';
 
 function extractToken(decodedText) {
     try {
@@ -16,22 +18,26 @@ function extractToken(decodedText) {
     }
 }
 
+const modeButtons = {
+    Culte: () => document.getElementById('mode-culte'),
+    SainteCene: () => document.getElementById('mode-saintecene'),
+    EcoleDominicale: () => document.getElementById('mode-ecole')
+};
+
+const modeInstructions = {
+    Culte: 'Présentez le QR code à la caméra',
+    SainteCene: 'Scan Sainte Cène — présentez le QR code',
+    EcoleDominicale: 'Scan École Dominicale — présentez le QR code'
+};
+
 function applyMode() {
-    const culteBtn = document.getElementById('mode-culte');
-    const sainteCeneBtn = document.getElementById('mode-saintecene');
     const instructions = document.getElementById('scan-instructions');
 
-    if (currentMode === 'SainteCene') {
-        culteBtn.classList.remove('active');
-        sainteCeneBtn.classList.add('active');
-        document.body.classList.add('mode-saintecene-active');
-        instructions.textContent = 'Scan Sainte Cène — présentez le QR code';
-    } else {
-        sainteCeneBtn.classList.remove('active');
-        culteBtn.classList.add('active');
-        document.body.classList.remove('mode-saintecene-active');
-        instructions.textContent = 'Présentez le QR code à la caméra';
+    for (const mode of validModes) {
+        modeButtons[mode]().classList.toggle('active', mode === currentMode);
+        document.body.classList.toggle(`mode-${mode.toLowerCase()}-active`, mode === currentMode);
     }
+    instructions.textContent = modeInstructions[currentMode];
 
     localStorage.setItem('scanMode', currentMode);
 }
@@ -44,16 +50,25 @@ function showResult(status, fullName) {
 
     overlay.className = `show ${status}`;
 
-    const isSainteCene = currentMode === 'SainteCene';
+    const okMessages = {
+        Culte: 'Présence enregistrée',
+        SainteCene: 'Présence Sainte Cène enregistrée',
+        EcoleDominicale: 'Présence École Dominicale enregistrée'
+    };
+    const duplicateMessages = {
+        Culte: "Déjà enregistré aujourd'hui",
+        SainteCene: 'Déjà enregistré pour la Sainte Cène ce mois-ci',
+        EcoleDominicale: "Déjà enregistré à l'École Dominicale aujourd'hui"
+    };
 
     if (status === 'ok') {
         icon.textContent = '✓';
         name.textContent = fullName ?? '';
-        message.textContent = isSainteCene ? 'Présence Sainte Cène enregistrée' : 'Présence enregistrée';
+        message.textContent = okMessages[currentMode];
     } else if (status === 'duplicate') {
         icon.textContent = '⚠';
         name.textContent = fullName ?? '';
-        message.textContent = isSainteCene ? 'Déjà enregistré pour la Sainte Cène ce mois-ci' : "Déjà enregistré aujourd'hui";
+        message.textContent = duplicateMessages[currentMode];
     } else if (status === 'not_found') {
         icon.textContent = '✕';
         name.textContent = '';
@@ -111,6 +126,10 @@ window.addEventListener('DOMContentLoaded', () => {
     });
     document.getElementById('mode-saintecene').addEventListener('click', () => {
         currentMode = 'SainteCene';
+        applyMode();
+    });
+    document.getElementById('mode-ecole').addEventListener('click', () => {
+        currentMode = 'EcoleDominicale';
         applyMode();
     });
 

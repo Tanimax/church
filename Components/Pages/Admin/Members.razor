@@ -166,7 +166,16 @@ else
                         <td>@member.FirstName</td>
                         <td>@member.Phone</td>
                         <td>@(member.BirthdayLabel ?? "—")</td>
-                        <td>@(member.IsBaptized ? "Oui" : "Non")</td>
+                        <td>
+                            @if (member.IsBaptized)
+                            {
+                                <span class="badge bg-success">Oui</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-secondary">Non</span>
+                            }
+                        </td>
                         <td>
                             @if (member.IsActive)
                             {

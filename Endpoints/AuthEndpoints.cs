@@ -80,13 +80,18 @@ public static class AuthEndpoints
                 <meta charset="utf-8">
                 <meta name="viewport" content="width=device-width, initial-scale=1.0">
                 <title>Connexion admin</title>
+                <link rel="preconnect" href="https://fonts.googleapis.com">
+                <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+                <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,560&family=Public+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
                 <style>
                     * { box-sizing: border-box; }
-                    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f4f6f8; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; padding: 1rem; }
-                    .card { background: #fff; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); padding: 1.5rem; max-width: 340px; width: 100%; }
-                    label { display: block; margin-bottom: 0.4rem; font-weight: 500; }
-                    input[type="text"], input[type="password"] { width: 100%; padding: 0.75rem; border: 1px solid #ccc; border-radius: 6px; font-size: 16px; margin-bottom: 1rem; }
-                    button { width: 100%; padding: 0.75rem; background: #2c3e50; color: #fff; border: none; border-radius: 6px; font-size: 1rem; cursor: pointer; }
+                    body { font-family: 'Public Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #f5f4ef; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; padding: 1rem; }
+                    .card { background: #fff; border-radius: 12px; box-shadow: 0 4px 20px rgba(27,36,54,0.08); padding: 1.75rem; max-width: 340px; width: 100%; border: 1px solid #e2ded2; }
+                    h3 { font-family: 'Fraunces', Georgia, serif; font-weight: 560; margin: 0 0 1.1rem; color: #1b2436; }
+                    label { display: block; margin-bottom: 0.4rem; font-weight: 500; color: #1b2436; }
+                    input[type="text"], input[type="password"] { width: 100%; padding: 0.75rem; border: 1px solid #d3cebd; border-radius: 6px; font-size: 16px; margin-bottom: 1rem; font-family: inherit; }
+                    button { width: 100%; padding: 0.75rem; background: #a8763a; color: #201304; border: none; border-radius: 6px; font-size: 1rem; font-weight: 600; cursor: pointer; }
+                    button:hover { background: #8a5f28; }
                     .error { color: #dc2626; }
                 </style>
             </head>

@@ -1,15 +1,141 @@
+:root {
+    --ink-900: #1b2436;
+    --ink-700: #445068;
+    --brass-600: #a8763a;
+    --brass-700: #8a5f28;
+    --brass-100: #f2e6d1;
+    --paper: #f5f4ef;
+    --surface: #ffffff;
+    --line: #e2ded2;
+    --line-strong: #d3cebd;
+    --text-primary: #1b2436;
+    --text-secondary: #5c6478;
+    --text-muted: #8b8f9c;
+    --good: #2f7d5c;
+    --good-bg: #e4f1ea;
+    --neutral-text: #6b6a5f;
+    --neutral-bg: #eeece2;
+    --sidebar-bg: #1b2436;
+    --sidebar-text: #c7cbdc;
+    --sidebar-text-active: #f6f4ef;
+
+    /* Bootstrap's own theming variables — table, form-control, card, etc. read these
+       directly rather than our tokens above, so they must be redefined too or components
+       stay stuck on Bootstrap's light defaults regardless of our overrides. */
+    --bs-body-bg: var(--surface);
+    --bs-body-color: var(--text-primary);
+    --bs-border-color: var(--line);
+    --bs-emphasis-color: var(--text-primary);
+    --bs-emphasis-color-rgb: 27, 36, 54;
+    --bs-secondary-color: var(--text-secondary);
+}
+
+@media (prefers-color-scheme: dark) {
+    :root {
+        --paper: #11151f;
+        --surface: #1a2032;
+        --line: #2a3148;
+        --line-strong: #384063;
+        --text-primary: #ece9dd;
+        --text-secondary: #a9adbe;
+        --text-muted: #767b8f;
+        --brass-600: #d3a15e;
+        --brass-700: #e6bc85;
+        --brass-100: #362a17;
+        --good: #5cbd92;
+        --good-bg: #143024;
+        --neutral-text: #b3b1a2;
+        --neutral-bg: #262a1f;
+        --sidebar-bg: #0d1119;
+        --sidebar-text: #a9adbe;
+        --sidebar-text-active: #f3f1e6;
+
+        --bs-body-bg: var(--surface);
+        --bs-body-color: var(--text-primary);
+        --bs-border-color: var(--line);
+        --bs-emphasis-color: var(--text-primary);
+        --bs-emphasis-color-rgb: 236, 233, 221;
+        --bs-secondary-color: var(--text-secondary);
+    }
+}
+
 html, body {
-    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    font-family: 'Public Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: var(--paper);
+    color: var(--text-primary);
+    font-variant-numeric: tabular-nums;
+}
+
+h1, h2, h3 {
+    font-family: 'Fraunces', Georgia, serif;
+    font-optical-sizing: auto;
+    font-weight: 560;
 }
 
 a, .btn-link {
-    color: #006bb7;
+    color: var(--brass-700);
 }
 
 .btn-primary {
-    color: #fff;
-    background-color: #1b6ec2;
-    border-color: #1861ac;
+    color: #201304;
+    background-color: var(--brass-600);
+    border-color: var(--brass-600);
+}
+
+.btn-primary:hover, .btn-primary:active {
+    background-color: var(--brass-700);
+    border-color: var(--brass-700);
+}
+
+.btn-outline-secondary {
+    color: var(--text-secondary);
+    border-color: var(--line-strong);
+}
+
+.btn-outline-secondary:hover {
+    background-color: var(--paper);
+    color: var(--text-primary);
+    border-color: var(--line-strong);
+}
+
+.badge.bg-success {
+    background-color: var(--good-bg) !important;
+    color: var(--good) !important;
+}
+
+.badge.bg-secondary {
+    background-color: var(--neutral-bg) !important;
+    color: var(--neutral-text) !important;
+}
+
+.table-responsive {
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.table {
+    color: var(--text-primary);
+    margin-bottom: 0;
+}
+
+.table thead th {
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    background: var(--paper);
+    border-bottom-color: var(--line);
+}
+
+.table td, .table th {
+    border-color: var(--line);
+}
+
+.table-striped > tbody > tr:nth-of-type(odd) > * {
+    background-color: var(--paper);
+    color: var(--text-primary);
 }
 
 .btn:focus, .btn:active:focus, .btn-link.nav-link:focus, .form-control:focus, .form-check-input:focus {

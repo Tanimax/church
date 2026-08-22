@@ -82,10 +82,17 @@ else
             .ToList();
 
         // --- Sainte Cène by month, current year ---
+        // Only counts members who are still active and baptized today, matching the
+        // SainteCeneReport table's filter — otherwise a member deactivated (or un-baptized)
+        // after the fact would still count here while disappearing from that report entirely,
+        // showing two different totals for the same month.
         var currentYear = today.Year;
         var sainteCeneAttendances = await db.Attendances
             .Include(a => a.ServiceSession)
-            .Where(a => a.Type == AttendanceType.SainteCene && a.ServiceSession!.Date.Year == currentYear)
+            .Include(a => a.Member)
+            .Where(a => a.Type == AttendanceType.SainteCene
+                     && a.ServiceSession!.Date.Year == currentYear
+                     && a.Member!.IsActive && a.Member!.IsBaptized)
             .Select(a => new { a.MemberId, Month = a.ServiceSession!.Date.Month })
             .ToListAsync();
 

@@ -56,6 +56,7 @@ else
                 <tr>
                     <th>Nom</th>
                     <th>Membres</th>
+                    <th></th>
                 </tr>
             </thead>
             <tbody>
@@ -64,11 +65,87 @@ else
                     <tr>
                         <td>@c.Name</td>
                         <td>@memberCounts.GetValueOrDefault(c.Id, 0)</td>
+                        <td>
+                            <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="() => OpenManageModal(c)">
+                                Gérer
+                            </button>
+                        </td>
                     </tr>
                 }
             </tbody>
         </table>
     </div>
+}
+
+@if (managingClass is not null)
+{
+    <div class="modal fade show d-block" tabindex="-1" role="dialog" @onclick="CloseManageModal">
+        <div class="modal-dialog modal-lg" role="document" @onclick:stopPropagation="true">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Gérer la classe : @managingClass.Name</h5>
+                    <button type="button" class="btn-close" aria-label="Fermer" @onclick="CloseManageModal"></button>
+                </div>
+                <div class="modal-body">
+                    <h6>Membres de la classe</h6>
+                    @if (!classMembers.Any())
+                    {
+                        <p class="text-muted">Aucun membre dans cette classe.</p>
+                    }
+                    else
+                    {
+                        <ul class="list-group mb-4">
+                            @foreach (var m in classMembers)
+                            {
+                                <li class="list-group-item d-flex justify-content-between align-items-center">
+                                    @m.FullName
+                                    <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="() => RemoveMemberFromClass(m)">
+                                        Retirer
+                                    </button>
+                                </li>
+                            }
+                        </ul>
+                    }
+
+                    <h6>Ajouter un membre</h6>
+                    <input type="search" class="form-control mb-2" placeholder="Rechercher un membre..."
+                           @bind="memberSearchTerm" @bind:event="oninput" />
+
+                    @if (!string.IsNullOrWhiteSpace(memberSearchTerm))
+                    {
+                        @if (!searchResults.Any())
+                        {
+                            <p class="text-muted">Aucun membre trouvé.</p>
+                        }
+                        else
+                        {
+                            <ul class="list-group">
+                                @foreach (var m in searchResults)
+                                {
+                                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                                        <span>
+                                            @m.FullName
+                                            @if (m.SundayClassId is not null && classNamesById.TryGetValue(m.SundayClassId.Value, out var otherName))
+                                            {
+                                                <span class="text-muted small"> — actuellement : @otherName</span>
+                                            }
+                                        </span>
+                                        <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="() => AddMemberToClass(m)">
+                                            Ajouter
+                                        </button>
+                                    </li>
+                                }
+                            </ul>
+                        }
+                    }
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-primary" @onclick="CloseManageModal">Fermer</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal-backdrop fade show"></div>
 }
 
 @code {
@@ -77,6 +154,30 @@ else
 
     private bool showAddModal;
     private SundayClassFormModel addFormModel = new();
+
+    private SundayClass? managingClass;
+    private List<Member> allMembers = new();
+    private string memberSearchTerm = "";
+
+    private Dictionary<int, string> classNamesById =>
+        classes?.ToDictionary(c => c.Id, c => c.Name) ?? new();
+
+    private List<Member> classMembers =>
+        managingClass is null
+            ? []
+            : allMembers
+                .Where(m => m.SundayClassId == managingClass.Id)
+                .OrderBy(m => m.LastName).ThenBy(m => m.FirstName)
+                .ToList();
+
+    private List<Member> searchResults =>
+        managingClass is null || string.IsNullOrWhiteSpace(memberSearchTerm)
+            ? []
+            : allMembers
+                .Where(m => m.IsActive && m.SundayClassId != managingClass.Id)
+                .Where(m => m.FullName.Contains(memberSearchTerm, StringComparison.OrdinalIgnoreCase))
+                .Take(10)
+                .ToList();
 
     protected override async Task OnInitializedAsync() => await LoadClasses();
 
@@ -110,6 +211,56 @@ else
         await db.SaveChangesAsync();
 
         showAddModal = false;
+        await LoadClasses();
+    }
+
+    private async Task OpenManageModal(SundayClass c)
+    {
+        managingClass = c;
+        memberSearchTerm = "";
+        await LoadAllMembers();
+    }
+
+    private void CloseManageModal()
+    {
+        managingClass = null;
+        memberSearchTerm = "";
+    }
+
+    private async Task LoadAllMembers()
+    {
+        await using var db = await DbFactory.CreateDbContextAsync();
+        allMembers = await db.Members.ToListAsync();
+    }
+
+    private async Task AddMemberToClass(Member member)
+    {
+        if (managingClass is null) return;
+
+        await using var db = await DbFactory.CreateDbContextAsync();
+        var tracked = await db.Members.FindAsync(member.Id);
+        if (tracked is not null)
+        {
+            tracked.SundayClassId = managingClass.Id;
+            await db.SaveChangesAsync();
+        }
+
+        memberSearchTerm = "";
+        await LoadAllMembers();
+        await LoadClasses();
+    }
+
+    private async Task RemoveMemberFromClass(Member member)
+    {
+        await using var db = await DbFactory.CreateDbContextAsync();
+        var tracked = await db.Members.FindAsync(member.Id);
+        if (tracked is not null)
+        {
+            tracked.SundayClassId = null;
+            await db.SaveChangesAsync();
+        }
+
+        await LoadAllMembers();
         await LoadClasses();
     }
 }

@@ -49,6 +49,7 @@
                             <label class="form-label">Rôle</label>
                             <InputSelect class="form-select" @bind-Value="addFormModel.Role">
                                 <option value="Secretaire">Secrétaire</option>
+                                <option value="EcoleDominicale">École Dominicale</option>
                                 <option value="Admin">Administrateur</option>
                             </InputSelect>
                         </div>
@@ -85,7 +86,14 @@ else
                 {
                     <tr>
                         <td>@user.Username</td>
-                        <td>@(user.Role == UserRole.Admin ? "Administrateur" : "Secrétaire")</td>
+                        <td>
+                            @(user.Role switch
+                            {
+                                UserRole.Admin => "Administrateur",
+                                UserRole.EcoleDominicale => "École Dominicale",
+                                _ => "Secrétaire"
+                            })
+                        </td>
                         <td>
                             @if (user.IsActive)
                             {

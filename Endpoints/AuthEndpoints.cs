@@ -56,6 +56,15 @@ public static class AuthEndpoints
             await context.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
             return Results.Redirect("/admin/login");
         });
+
+        // Lets the scanner PWA (a static page, not a Blazor component) find out the current
+        // user's role client-side, so it can show only the check-in modes that role is allowed
+        // to use.
+        app.MapGet("/api/me", (ClaimsPrincipal user) =>
+        {
+            var role = user.FindFirst(ClaimTypes.Role)?.Value;
+            return Results.Ok(new { role });
+        }).RequireAuthorization();
     }
 
     // Only allow redirecting back to a same-site path after login (never a full URL),

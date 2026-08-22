@@ -42,6 +42,39 @@ function applyMode() {
     localStorage.setItem('scanMode', currentMode);
 }
 
+// Admin can use every mode; other roles are limited to the one their account is for. The
+// scanner is a static page (not Blazor), so it asks /api/me for the logged-in user's role
+// rather than having it rendered server-side.
+const roleAllowedModes = {
+    Admin: ['Culte', 'SainteCene', 'EcoleDominicale'],
+    Secretaire: ['SainteCene'],
+    EcoleDominicale: ['EcoleDominicale']
+};
+
+async function applyRoleRestrictions() {
+    try {
+        const response = await fetch('/api/me');
+        if (!response.ok) {
+            return;
+        }
+        const { role } = await response.json();
+        const allowedModes = roleAllowedModes[role] ?? validModes;
+
+        for (const mode of validModes) {
+            if (!allowedModes.includes(mode)) {
+                modeButtons[mode]().style.display = 'none';
+            }
+        }
+
+        if (!allowedModes.includes(currentMode)) {
+            currentMode = allowedModes[0];
+        }
+    } catch {
+        // If the role lookup fails for any reason, fail open rather than leaving the
+        // scanner stuck with no visible modes.
+    }
+}
+
 function showResult(status, fullName) {
     const overlay = document.getElementById('result-overlay');
     const icon = overlay.querySelector('.icon');
@@ -113,11 +146,12 @@ async function onScanSuccess(decodedText) {
     }, 2500);
 }
 
-window.addEventListener('DOMContentLoaded', () => {
+window.addEventListener('DOMContentLoaded', async () => {
     if ('serviceWorker' in navigator) {
         navigator.serviceWorker.register('/scanner/sw.js', { scope: '/scanner/' });
     }
 
+    await applyRoleRestrictions();
     applyMode();
 
     document.getElementById('mode-culte').addEventListener('click', () => {

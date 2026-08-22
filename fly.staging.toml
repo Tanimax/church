@@ -1,0 +1,31 @@
+# fly.toml for the staging environment — deploy changes here and test them before
+# promoting to production. Same shape as fly.toml, pointed at the staging app and its own
+# database (a separate database on the same Postgres cluster as prod, not a separate server).
+#
+# Deploy with: flyctl deploy --config fly.staging.toml
+
+app = 'church-attendance-app-staging'
+primary_region = 'ewr'
+
+[build]
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = 'stop'
+  auto_start_machines = true
+  min_machines_running = 0
+  processes = ['app']
+
+[mounts]
+  source = 'data'
+  destination = '/data'
+
+[env]
+  # DATABASE_URL is injected automatically by `flyctl postgres attach`.
+  DataProtectionKeysPath = '/data/dataprotection-keys'
+
+[[vm]]
+  memory = '512mb'
+  cpu_kind = 'shared'
+  cpus = 1
+  memory_mb = 512

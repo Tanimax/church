@@ -54,5 +54,28 @@ public static class MembersEndpoints
 
             return Results.File(png, "image/png");
         });
+
+        app.MapGet("/admin/members/export.csv", async (string? search, bool? baptized, AppDbContext db) =>
+        {
+            var query = db.Members.AsQueryable();
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                query = query.Where(m => EF.Functions.ILike(m.FirstName + " " + m.LastName, $"%{search}%"));
+            }
+            if (baptized is not null)
+            {
+                query = query.Where(m => m.IsBaptized == baptized);
+            }
+
+            var members = await query
+                .OrderBy(m => m.LastName).ThenBy(m => m.FirstName)
+                .ToListAsync();
+
+            var csv = CsvExportService.BuildMembersCsv(members.Select(m =>
+                (m.LastName, m.FirstName, m.Phone, m.BirthdayLabel, m.IsBaptized, m.IsActive)));
+            var bytes = CsvExportService.ToCsvFileBytes(csv);
+
+            return Results.File(bytes, "text/csv", $"membres_{DateTime.Now:yyyyMMdd}.csv");
+        }).RequireAuthorization();
     }
 }

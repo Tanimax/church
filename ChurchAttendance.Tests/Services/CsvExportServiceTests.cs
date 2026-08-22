@@ -62,4 +62,46 @@ public class CsvExportServiceTests
 
         Assert.Equal($"Date,Nom,HeureArrivee{NL}2026-07-26,{expectedField},2026-07-26 09:00{NL}", csv);
     }
+
+    [Fact]
+    public void BuildMembersCsv_NoRows_ReturnsHeaderOnly()
+    {
+        var csv = CsvExportService.BuildMembersCsv([]);
+
+        Assert.Equal($"Nom,Prenom,Telephone,Naissance,Baptise,Statut{NL}", csv);
+    }
+
+    [Fact]
+    public void BuildMembersCsv_FormatsFieldsAndBooleans()
+    {
+        var rows = new[]
+        {
+            (LastName: "Martin", FirstName: "Alice", Phone: (string?)"555-1234", BirthdayLabel: (string?)"26 juillet", IsBaptized: true, IsActive: true)
+        };
+
+        var csv = CsvExportService.BuildMembersCsv(rows);
+
+        Assert.Equal($"Nom,Prenom,Telephone,Naissance,Baptise,Statut{NL}Martin,Alice,555-1234,26 juillet,Oui,Actif{NL}", csv);
+    }
+
+    [Fact]
+    public void BuildMembersCsv_MissingPhoneAndBirthday_RendersEmptyFields()
+    {
+        var rows = new[]
+        {
+            (LastName: "Nadeau", FirstName: "Bob", Phone: (string?)null, BirthdayLabel: (string?)null, IsBaptized: false, IsActive: false)
+        };
+
+        var csv = CsvExportService.BuildMembersCsv(rows);
+
+        Assert.Equal($"Nom,Prenom,Telephone,Naissance,Baptise,Statut{NL}Nadeau,Bob,,,Non,Inactif{NL}", csv);
+    }
+
+    [Fact]
+    public void ToCsvFileBytes_PrependsUtf8Bom()
+    {
+        var bytes = CsvExportService.ToCsvFileBytes("Nom\r\n");
+
+        Assert.Equal([0xEF, 0xBB, 0xBF], bytes[..3]);
+    }
 }

@@ -19,7 +19,10 @@
             <option value="false">Non baptisé(e)</option>
         </select>
     </div>
-    <button type="button" class="btn btn-primary" @onclick="OpenAddModal">+ Ajouter un membre</button>
+    <div class="d-flex gap-2">
+        <a class="btn btn-outline-secondary" href="@ExportUrl" target="_blank">Exporter en Excel</a>
+        <button type="button" class="btn btn-primary" @onclick="OpenAddModal">+ Ajouter un membre</button>
+    </div>
 </div>
 
 @if (showAddModal)
@@ -234,6 +237,8 @@ else
     private string addCardUrl = "";
 
     private string CardUrl(string token) => $"{Nav.BaseUri.TrimEnd('/')}/card/{token}";
+
+    private string ExportUrl => $"/admin/members/export.csv?search={Uri.EscapeDataString(searchTerm)}&baptized={baptizedFilterValue}";
 
     private bool? baptizedFilter => baptizedFilterValue switch
     {

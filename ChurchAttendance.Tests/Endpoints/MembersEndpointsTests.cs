@@ -4,6 +4,7 @@ using ChurchAttendance.Data;
 using ChurchAttendance.Endpoints;
 using ChurchAttendance.Models;
 using ChurchAttendance.Tests.Infrastructure;
+using Microsoft.AspNetCore.Mvc.Testing;
 
 namespace ChurchAttendance.Tests.Endpoints;
 
@@ -89,5 +90,80 @@ public class MembersEndpointsTests
         var response = await client.GetAsync("/api/members/inactive-token/qr.png");
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task ExportCsv_WithoutAuthentication_RedirectsToLogin()
+    {
+        using var factory = new CustomWebApplicationFactory();
+        var client = factory.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
+
+        var response = await client.GetAsync("/admin/members/export.csv");
+
+        Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
+        Assert.Contains("/admin/login", response.Headers.Location?.ToString());
+    }
+
+    [Fact]
+    public async Task ExportCsv_Authenticated_ReturnsCsvWithMatchingMembers()
+    {
+        using var factory = new CustomWebApplicationFactory();
+        await using (var db = factory.CreateDbContext())
+        {
+            db.Members.AddRange(
+                new Member { FirstName = "Alice", LastName = "Martin", Token = "alice-token", CreatedAt = DateTime.UtcNow, IsBaptized = true },
+                new Member { FirstName = "Bob", LastName = "Nadeau", Token = "bob-token", CreatedAt = DateTime.UtcNow, IsBaptized = false });
+            await db.SaveChangesAsync();
+        }
+        var client = await TestAuth.CreateAuthenticatedClientAsync(factory);
+
+        var response = await client.GetAsync("/admin/members/export.csv");
+        var csv = await response.Content.ReadAsStringAsync();
+
+        response.EnsureSuccessStatusCode();
+        Assert.Equal("text/csv", response.Content.Headers.ContentType?.MediaType);
+        Assert.StartsWith("﻿Nom,Prenom,Telephone,Naissance,Baptise,Statut", csv);
+        Assert.Contains("Martin,Alice", csv);
+        Assert.Contains("Nadeau,Bob", csv);
+    }
+
+    [Fact]
+    public async Task ExportCsv_SearchFilter_OnlyReturnsMatchingMembers()
+    {
+        using var factory = new CustomWebApplicationFactory();
+        await using (var db = factory.CreateDbContext())
+        {
+            db.Members.AddRange(
+                new Member { FirstName = "Alice", LastName = "Martin", Token = "alice-token", CreatedAt = DateTime.UtcNow },
+                new Member { FirstName = "Bob", LastName = "Nadeau", Token = "bob-token", CreatedAt = DateTime.UtcNow });
+            await db.SaveChangesAsync();
+        }
+        var client = await TestAuth.CreateAuthenticatedClientAsync(factory);
+
+        var response = await client.GetAsync("/admin/members/export.csv?search=mart");
+        var csv = await response.Content.ReadAsStringAsync();
+
+        Assert.Contains("Martin,Alice", csv);
+        Assert.DoesNotContain("Nadeau,Bob", csv);
+    }
+
+    [Fact]
+    public async Task ExportCsv_BaptizedFilter_OnlyReturnsMatchingMembers()
+    {
+        using var factory = new CustomWebApplicationFactory();
+        await using (var db = factory.CreateDbContext())
+        {
+            db.Members.AddRange(
+                new Member { FirstName = "Alice", LastName = "Martin", Token = "alice-token", CreatedAt = DateTime.UtcNow, IsBaptized = true },
+                new Member { FirstName = "Bob", LastName = "Nadeau", Token = "bob-token", CreatedAt = DateTime.UtcNow, IsBaptized = false });
+            await db.SaveChangesAsync();
+        }
+        var client = await TestAuth.CreateAuthenticatedClientAsync(factory);
+
+        var response = await client.GetAsync("/admin/members/export.csv?baptized=true");
+        var csv = await response.Content.ReadAsStringAsync();
+
+        Assert.Contains("Martin,Alice", csv);
+        Assert.DoesNotContain("Nadeau,Bob", csv);
     }
 }

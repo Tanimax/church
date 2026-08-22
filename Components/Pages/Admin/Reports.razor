@@ -35,7 +35,7 @@ else
         <table class="table table-sm table-striped">
             <thead><tr><th>Nom</th><th>Heure</th></tr></thead>
             <tbody>
-                @foreach (var row in detailRows)
+                @foreach (var row in pagedPresentRows)
                 {
                     <tr>
                         <td>@row.FullName</td>
@@ -44,22 +44,77 @@ else
                 }
             </tbody>
         </table>
+
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-4">
+            <span class="text-muted">
+                @detailRows.Count présence(s) — page @presentPage sur @presentTotalPages
+            </span>
+            <div class="d-flex align-items-center gap-2">
+                <label class="text-muted mb-0" for="presentPageSize">Par page</label>
+                <select id="presentPageSize" class="form-select form-select-sm w-auto" @bind="presentPageSize" @bind:event="onchange" @bind:after="ResetPresentPage">
+                    <option value="10">10</option>
+                    <option value="25">25</option>
+                    <option value="50">50</option>
+                    <option value="100">100</option>
+                    <option value="@int.MaxValue">Tous</option>
+                </select>
+                <div class="btn-group">
+                    <button type="button" class="btn btn-outline-secondary" disabled="@(presentPage <= 1)" @onclick="() => GoToPresentPage(presentPage - 1)">
+                        ‹ Précédent
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary" disabled="@(presentPage >= presentTotalPages)" @onclick="() => GoToPresentPage(presentPage + 1)">
+                        Suivant ›
+                    </button>
+                </div>
+            </div>
+        </div>
     }
 
     <h4 class="mt-4">Membres absents ce dimanche</h4>
-    <table class="table table-sm">
-        <thead><tr><th>Nom</th><th>Téléphone</th><th>Dernière présence</th></tr></thead>
-        <tbody>
-            @foreach (var m in absentMembers)
-            {
-                <tr>
-                    <td>@m.FullName</td>
-                    <td>@m.Phone</td>
-                    <td>@(m.LastAttendance is null ? "Jamais" : m.LastAttendance.Value.ToString("dd/MM/yyyy"))</td>
-                </tr>
-            }
-        </tbody>
-    </table>
+    @if (!absentMembers.Any())
+    {
+        <p class="text-muted">Aucun membre absent ce dimanche.</p>
+    }
+    else
+    {
+        <table class="table table-sm">
+            <thead><tr><th>Nom</th><th>Téléphone</th><th>Dernière présence</th></tr></thead>
+            <tbody>
+                @foreach (var m in pagedAbsentMembers)
+                {
+                    <tr>
+                        <td>@m.FullName</td>
+                        <td>@m.Phone</td>
+                        <td>@(m.LastAttendance is null ? "Jamais" : m.LastAttendance.Value.ToString("dd/MM/yyyy"))</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <span class="text-muted">
+                @absentMembers.Count absent(s) — page @absentPage sur @absentTotalPages
+            </span>
+            <div class="d-flex align-items-center gap-2">
+                <label class="text-muted mb-0" for="absentPageSize">Par page</label>
+                <select id="absentPageSize" class="form-select form-select-sm w-auto" @bind="absentPageSize" @bind:event="onchange" @bind:after="ResetAbsentPage">
+                    <option value="10">10</option>
+                    <option value="25">25</option>
+                    <option value="50">50</option>
+                    <option value="100">100</option>
+                    <option value="@int.MaxValue">Tous</option>
+                </select>
+                <div class="btn-group">
+                    <button type="button" class="btn btn-outline-secondary" disabled="@(absentPage <= 1)" @onclick="() => GoToAbsentPage(absentPage - 1)">
+                        ‹ Précédent
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary" disabled="@(absentPage >= absentTotalPages)" @onclick="() => GoToAbsentPage(absentPage + 1)">
+                        Suivant ›
+                    </button>
+                </div>
+            </div>
+        </div>
+    }
 }
 
 @code {
@@ -67,6 +122,24 @@ else
 
     private List<(string FullName, DateTime CheckedInAt)>? detailRows;
     private List<(string FullName, string? Phone, DateOnly? LastAttendance)> absentMembers = new();
+
+    private int presentPage = 1;
+    private int presentPageSize = 10;
+    private int absentPage = 1;
+    private int absentPageSize = 10;
+
+    private int presentTotalPages => Math.Max(1, (int)Math.Ceiling((detailRows?.Count ?? 0) / (double)presentPageSize));
+    private IEnumerable<(string FullName, DateTime CheckedInAt)> pagedPresentRows =>
+        (detailRows ?? []).Skip((Math.Min(presentPage, presentTotalPages) - 1) * presentPageSize).Take(presentPageSize);
+
+    private int absentTotalPages => Math.Max(1, (int)Math.Ceiling(absentMembers.Count / (double)absentPageSize));
+    private IEnumerable<(string FullName, string? Phone, DateOnly? LastAttendance)> pagedAbsentMembers =>
+        absentMembers.Skip((Math.Min(absentPage, absentTotalPages) - 1) * absentPageSize).Take(absentPageSize);
+
+    private void ResetPresentPage() => presentPage = 1;
+    private void ResetAbsentPage() => absentPage = 1;
+    private void GoToPresentPage(int page) => presentPage = Math.Clamp(page, 1, presentTotalPages);
+    private void GoToAbsentPage(int page) => absentPage = Math.Clamp(page, 1, absentTotalPages);
 
     private string ExportUrl => $"/admin/reports/export.csv?start={selectedDate:yyyy-MM-dd}&end={selectedDate:yyyy-MM-dd}";
 
@@ -116,6 +189,9 @@ else
             .Select(m => ($"{m.FirstName} {m.LastName}", m.Phone, m.LastAttendance))
             .OrderBy(m => m.LastAttendance ?? DateOnly.MinValue)
             .ToList();
+
+        ResetPresentPage();
+        ResetAbsentPage();
     }
 
     private static DateOnly GetMostRecentSunday()

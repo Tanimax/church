@@ -55,7 +55,7 @@ public static class MembersEndpoints
             return Results.File(png, "image/png");
         });
 
-        app.MapGet("/admin/members/export.csv", async (string? search, string? baptized, AppDbContext db) =>
+        app.MapGet("/admin/members/export.csv", async (string? search, string? baptized, string? active, AppDbContext db) =>
         {
             var query = db.Members.AsQueryable();
             if (!string.IsNullOrWhiteSpace(search))
@@ -63,9 +63,10 @@ public static class MembersEndpoints
                 query = query.Where(m => EF.Functions.ILike(m.FirstName + " " + m.LastName, $"%{search}%"));
             }
 
-            // Bound as a string, not bool?: the export link always includes baptized=<value> (even
-            // "" when no filter is selected), and ASP.NET Core's automatic bool? query binder throws
-            // BadHttpRequestException on an empty string instead of treating it as absent.
+            // Bound as strings, not bool?: the export link always includes baptized=<value> and
+            // active=<value> (even "" when no filter is selected), and ASP.NET Core's automatic
+            // bool? query binder throws BadHttpRequestException on an empty string instead of
+            // treating it as absent.
             var baptizedFilter = baptized switch
             {
                 "true" => true,
@@ -75,6 +76,17 @@ public static class MembersEndpoints
             if (baptizedFilter is not null)
             {
                 query = query.Where(m => m.IsBaptized == baptizedFilter);
+            }
+
+            var activeFilter = active switch
+            {
+                "true" => true,
+                "false" => false,
+                _ => (bool?)null
+            };
+            if (activeFilter is not null)
+            {
+                query = query.Where(m => m.IsActive == activeFilter);
             }
 
             var members = await query

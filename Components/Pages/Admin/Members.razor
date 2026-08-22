@@ -18,6 +18,11 @@
             <option value="true">Baptisé(e)</option>
             <option value="false">Non baptisé(e)</option>
         </select>
+        <select id="activeFilter" class="form-select w-auto" @bind="activeFilterValue" @bind:after="ResetPage">
+            <option value="">Tous (actif ou inactif)</option>
+            <option value="true">Actif</option>
+            <option value="false">Inactif</option>
+        </select>
     </div>
     <div class="d-flex gap-2">
         <a class="btn btn-outline-secondary" href="@ExportUrl" target="_blank">Exporter en Excel</a>
@@ -237,6 +242,7 @@ else
     private List<Member>? members;
     private string searchTerm = "";
     private string baptizedFilterValue = "";
+    private string activeFilterValue = "";
     private int currentPage = 1;
     private int pageSize = 10;
 
@@ -247,9 +253,16 @@ else
 
     private string CardUrl(string token) => $"{Nav.BaseUri.TrimEnd('/')}/card/{token}";
 
-    private string ExportUrl => $"/admin/members/export.csv?search={Uri.EscapeDataString(searchTerm)}&baptized={baptizedFilterValue}";
+    private string ExportUrl => $"/admin/members/export.csv?search={Uri.EscapeDataString(searchTerm)}&baptized={baptizedFilterValue}&active={activeFilterValue}";
 
     private bool? baptizedFilter => baptizedFilterValue switch
+    {
+        "true" => true,
+        "false" => false,
+        _ => null
+    };
+
+    private bool? activeFilter => activeFilterValue switch
     {
         "true" => true,
         "false" => false,
@@ -262,6 +275,7 @@ else
             : members
                 .Where(m => string.IsNullOrWhiteSpace(searchTerm) || m.FullName.Contains(searchTerm, StringComparison.OrdinalIgnoreCase))
                 .Where(m => baptizedFilter is null || m.IsBaptized == baptizedFilter)
+                .Where(m => activeFilter is null || m.IsActive == activeFilter)
                 .ToList();
 
     private int totalPages => Math.Max(1, (int)Math.Ceiling(filteredMembers.Count / (double)pageSize));

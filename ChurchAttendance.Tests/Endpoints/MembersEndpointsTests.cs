@@ -130,8 +130,8 @@ public class MembersEndpointsTests
     [Fact]
     public async Task ExportCsv_EmptySearchAndBaptizedQueryValues_ReturnsAllMembers()
     {
-        // Members.razor's "Exporter en Excel" link always includes both query params, even when
-        // no filter is selected (search=&baptized=) — this must not 400/crash.
+        // Members.razor's "Exporter en Excel" link always includes all three query params, even
+        // when no filter is selected (search=&baptized=&active=) — this must not 400/crash.
         using var factory = new CustomWebApplicationFactory();
         await using (var db = factory.CreateDbContext())
         {
@@ -140,7 +140,7 @@ public class MembersEndpointsTests
         }
         var client = await TestAuth.CreateAuthenticatedClientAsync(factory);
 
-        var response = await client.GetAsync("/admin/members/export.csv?search=&baptized=");
+        var response = await client.GetAsync("/admin/members/export.csv?search=&baptized=&active=");
         var csv = await response.Content.ReadAsStringAsync();
 
         response.EnsureSuccessStatusCode();
@@ -185,5 +185,25 @@ public class MembersEndpointsTests
 
         Assert.Contains("Martin,Alice", csv);
         Assert.DoesNotContain("Nadeau,Bob", csv);
+    }
+
+    [Fact]
+    public async Task ExportCsv_ActiveFilter_OnlyReturnsMatchingMembers()
+    {
+        using var factory = new CustomWebApplicationFactory();
+        await using (var db = factory.CreateDbContext())
+        {
+            db.Members.AddRange(
+                new Member { FirstName = "Alice", LastName = "Martin", Token = "alice-token", CreatedAt = DateTime.UtcNow, IsActive = true },
+                new Member { FirstName = "Bob", LastName = "Nadeau", Token = "bob-token", CreatedAt = DateTime.UtcNow, IsActive = false });
+            await db.SaveChangesAsync();
+        }
+        var client = await TestAuth.CreateAuthenticatedClientAsync(factory);
+
+        var response = await client.GetAsync("/admin/members/export.csv?active=false");
+        var csv = await response.Content.ReadAsStringAsync();
+
+        Assert.Contains("Nadeau,Bob", csv);
+        Assert.DoesNotContain("Martin,Alice", csv);
     }
 }

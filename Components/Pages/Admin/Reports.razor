@@ -32,18 +32,20 @@ else
     }
     else
     {
-        <table class="table table-sm table-striped">
-            <thead><tr><th>Nom</th><th>Heure</th></tr></thead>
-            <tbody>
-                @foreach (var row in pagedPresentRows)
-                {
-                    <tr>
-                        <td>@row.FullName</td>
-                        <td>@row.CheckedInAt.ToLocalTime().ToString("HH:mm")</td>
-                    </tr>
-                }
-            </tbody>
-        </table>
+        <div class="table-responsive">
+            <table class="table table-striped align-middle">
+                <thead><tr><th>Nom</th><th>Heure</th></tr></thead>
+                <tbody>
+                    @foreach (var row in pagedPresentRows)
+                    {
+                        <tr>
+                            <td>@row.FullName</td>
+                            <td>@row.CheckedInAt.ToLocalTime().ToString("HH:mm")</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
 
         <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-4">
             <span class="text-muted">
@@ -77,19 +79,21 @@ else
     }
     else
     {
-        <table class="table table-sm">
-            <thead><tr><th>Nom</th><th>Téléphone</th><th>Dernière présence</th></tr></thead>
-            <tbody>
-                @foreach (var m in pagedAbsentMembers)
-                {
-                    <tr>
-                        <td>@m.FullName</td>
-                        <td>@m.Phone</td>
-                        <td>@(m.LastAttendance is null ? "Jamais" : m.LastAttendance.Value.ToString("dd/MM/yyyy"))</td>
-                    </tr>
-                }
-            </tbody>
-        </table>
+        <div class="table-responsive">
+            <table class="table table-striped align-middle">
+                <thead><tr><th>Nom</th><th>Téléphone</th><th>Dernière présence</th></tr></thead>
+                <tbody>
+                    @foreach (var m in pagedAbsentMembers)
+                    {
+                        <tr>
+                            <td>@m.FullName</td>
+                            <td>@m.Phone</td>
+                            <td>@(m.LastAttendance is null ? "Jamais" : m.LastAttendance.Value.ToString("dd/MM/yyyy"))</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
 
         <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
             <span class="text-muted">

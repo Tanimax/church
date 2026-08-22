@@ -1,7 +1,15 @@
 bin/
 obj/
+**/bin/
+**/obj/
 *.db
 *.db-shm
 *.db-wal
 .vs/
 .git/
+
+# Member data exports kept out of git for privacy — must also never leave the machine as
+# part of a Docker build context (Fly's remote builder receives the full context).
+Data/*.xls
+Data/*.xlsx
+*.docx

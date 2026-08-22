@@ -128,6 +128,26 @@ public class MembersEndpointsTests
     }
 
     [Fact]
+    public async Task ExportCsv_EmptySearchAndBaptizedQueryValues_ReturnsAllMembers()
+    {
+        // Members.razor's "Exporter en Excel" link always includes both query params, even when
+        // no filter is selected (search=&baptized=) — this must not 400/crash.
+        using var factory = new CustomWebApplicationFactory();
+        await using (var db = factory.CreateDbContext())
+        {
+            db.Members.Add(new Member { FirstName = "Alice", LastName = "Martin", Token = "alice-token", CreatedAt = DateTime.UtcNow });
+            await db.SaveChangesAsync();
+        }
+        var client = await TestAuth.CreateAuthenticatedClientAsync(factory);
+
+        var response = await client.GetAsync("/admin/members/export.csv?search=&baptized=");
+        var csv = await response.Content.ReadAsStringAsync();
+
+        response.EnsureSuccessStatusCode();
+        Assert.Contains("Martin,Alice", csv);
+    }
+
+    [Fact]
     public async Task ExportCsv_SearchFilter_OnlyReturnsMatchingMembers()
     {
         using var factory = new CustomWebApplicationFactory();

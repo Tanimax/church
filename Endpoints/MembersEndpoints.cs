@@ -55,16 +55,26 @@ public static class MembersEndpoints
             return Results.File(png, "image/png");
         });
 
-        app.MapGet("/admin/members/export.csv", async (string? search, bool? baptized, AppDbContext db) =>
+        app.MapGet("/admin/members/export.csv", async (string? search, string? baptized, AppDbContext db) =>
         {
             var query = db.Members.AsQueryable();
             if (!string.IsNullOrWhiteSpace(search))
             {
                 query = query.Where(m => EF.Functions.ILike(m.FirstName + " " + m.LastName, $"%{search}%"));
             }
-            if (baptized is not null)
+
+            // Bound as a string, not bool?: the export link always includes baptized=<value> (even
+            // "" when no filter is selected), and ASP.NET Core's automatic bool? query binder throws
+            // BadHttpRequestException on an empty string instead of treating it as absent.
+            var baptizedFilter = baptized switch
             {
-                query = query.Where(m => m.IsBaptized == baptized);
+                "true" => true,
+                "false" => false,
+                _ => (bool?)null
+            };
+            if (baptizedFilter is not null)
+            {
+                query = query.Where(m => m.IsBaptized == baptizedFilter);
             }
 
             var members = await query

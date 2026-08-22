@@ -141,6 +141,28 @@ body.mode-ecoledominicale-active #mode-toggle {
     opacity: 0.9;
 }
 
+#logout-form {
+    position: fixed;
+    top: 0.6rem;
+    right: 0.6rem;
+    z-index: 1500;
+    margin: 0;
+}
+
+#logout-btn {
+    padding: 0.4rem 0.7rem;
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    background: rgba(255, 255, 255, 0.08);
+    color: #d1d5db;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    cursor: pointer;
+}
+
+#logout-btn:hover {
+    background: rgba(255, 255, 255, 0.16);
+}
+
 #status-banner {
     position: fixed;
     top: 0;

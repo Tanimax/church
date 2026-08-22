@@ -1,4 +1,4 @@
-const CACHE_NAME = 'church-scanner-v2';
+const CACHE_NAME = 'church-scanner-v3';
 const APP_SHELL = [
     '/scanner/index.html',
     '/scanner/style.css',
@@ -35,6 +35,18 @@ self.addEventListener('fetch', (event) => {
     }
 
     if (event.request.method !== 'GET' || !url.pathname.startsWith('/scanner/')) {
+        return;
+    }
+
+    // The entry page must always go to the network first so the server's auth gate (which
+    // redirects to /admin/login when the session isn't authenticated) gets a chance to run.
+    // Serving it cache-first would mean the request never reaches the server at all, so anyone
+    // who once opened the scanner could keep reopening it after logging out. Fall back to the
+    // cached shell only when the network is genuinely unreachable (true offline use).
+    if (event.request.mode === 'navigate' || url.pathname === '/scanner/index.html') {
+        event.respondWith(
+            fetch(event.request).catch(() => caches.match(event.request))
+        );
         return;
     }
 

@@ -23,6 +23,11 @@ public class Member
     public int? BirthDay { get; set; }
     public int? BirthMonth { get; set; }
 
+    // A member belongs to at most one Sunday School class at a time — assigning them to a
+    // new class overwrites this rather than requiring a separate membership table.
+    public int? SundayClassId { get; set; }
+    public SundayClass? SundayClass { get; set; }
+
     private static readonly string[] MonthNames =
     [
         "", "janvier", "février", "mars", "avril", "mai", "juin",

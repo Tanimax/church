@@ -142,6 +142,82 @@
     <div class="modal-backdrop fade show"></div>
 }
 
+@if (editingMember is not null)
+{
+    <div class="modal fade show d-block" tabindex="-1" role="dialog" @onclick="CloseEditModal">
+        <div class="modal-dialog" role="document" @onclick:stopPropagation="true">
+            <div class="modal-content">
+                <EditForm Model="editFormModel" OnValidSubmit="HandleEditSubmit">
+                    <DataAnnotationsValidator />
+                    <div class="modal-header">
+                        <h5 class="modal-title">Modifier @editingMember.FullName</h5>
+                        <button type="button" class="btn-close" aria-label="Fermer" @onclick="CloseEditModal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <ValidationSummary />
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Prénom</label>
+                                <InputText class="form-control" @bind-Value="editFormModel.FirstName" />
+                            </div>
+
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Nom</label>
+                                <InputText class="form-control" @bind-Value="editFormModel.LastName" />
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Téléphone (optionnel)</label>
+                            <InputText class="form-control" @bind-Value="editFormModel.Phone" />
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Courriel (optionnel)</label>
+                            <InputText type="email" class="form-control" @bind-Value="editFormModel.Email" />
+                        </div>
+
+                        <div class="row">
+                            <div class="col-auto mb-3">
+                                <label class="form-label">Jour de naissance (optionnel)</label>
+                                <InputSelect class="form-select" @bind-Value="editFormModel.BirthDay">
+                                    <option value="">--</option>
+                                    @for (var day = 1; day <= 31; day++)
+                                    {
+                                        <option value="@day">@day</option>
+                                    }
+                                </InputSelect>
+                            </div>
+
+                            <div class="col-auto mb-3">
+                                <label class="form-label">Mois de naissance (optionnel)</label>
+                                <InputSelect class="form-select" @bind-Value="editFormModel.BirthMonth">
+                                    <option value="">--</option>
+                                    @for (var month = 1; month <= 12; month++)
+                                    {
+                                        <option value="@month">@MonthNames[month]</option>
+                                    }
+                                </InputSelect>
+                            </div>
+                        </div>
+
+                        <div class="mb-3 form-check">
+                            <InputCheckbox class="form-check-input" id="editIsBaptized" @bind-Value="editFormModel.IsBaptized" />
+                            <label class="form-check-label" for="editIsBaptized">Baptisé(e)</label>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-link" @onclick="CloseEditModal">Annuler</button>
+                        <button type="submit" class="btn btn-primary">Enregistrer</button>
+                    </div>
+                </EditForm>
+            </div>
+        </div>
+    </div>
+    <div class="modal-backdrop fade show"></div>
+}
+
 @if (members is null)
 {
     <p><em>Chargement...</em></p>
@@ -214,7 +290,9 @@ else
                         <td>
                             <div class="d-flex flex-wrap gap-2 align-items-center">
                                 <a href="/card/@member.Token" target="_blank">Voir la carte</a>
-                                <a href="/admin/members/edit/@member.Id" class="btn btn-sm btn-outline-secondary">Modifier</a>
+                                <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="() => OpenEditModal(member)">
+                                    Modifier
+                                </button>
                                 <button type="button" class="btn btn-sm btn-outline-secondary"
                                         data-url="@CardUrl(member.Token)" onclick="copyToClipboard(this)">
                                     Copier le lien
@@ -272,6 +350,9 @@ else
     private MemberFormModel addFormModel = new();
     private Member? addCreatedMember;
     private string addCardUrl = "";
+
+    private Member? editingMember;
+    private MemberFormModel editFormModel = new();
 
     private string CardUrl(string token) => $"{Nav.BaseUri.TrimEnd('/')}/card/{token}";
 
@@ -395,6 +476,53 @@ else
             await EmailService.SendWelcomeEmailAsync(member.Email, member.FullName, addCardUrl);
         }
 
+        await LoadMembers();
+    }
+
+    private void OpenEditModal(Member member)
+    {
+        editingMember = member;
+        editFormModel = new MemberFormModel
+        {
+            FirstName = member.FirstName,
+            LastName = member.LastName,
+            Phone = member.Phone,
+            Email = member.Email,
+            IsBaptized = member.IsBaptized,
+            BirthDay = member.BirthDay,
+            BirthMonth = member.BirthMonth
+        };
+    }
+
+    private void CloseEditModal() => editingMember = null;
+
+    private async Task HandleEditSubmit()
+    {
+        if (editingMember is null)
+        {
+            return;
+        }
+
+        await using var db = await DbFactory.CreateDbContextAsync();
+        var tracked = await db.Members.FindAsync(editingMember.Id);
+        if (tracked is null)
+        {
+            editingMember = null;
+            await LoadMembers();
+            return;
+        }
+
+        tracked.FirstName = editFormModel.FirstName.Trim();
+        tracked.LastName = editFormModel.LastName.Trim();
+        tracked.Phone = string.IsNullOrWhiteSpace(editFormModel.Phone) ? null : editFormModel.Phone.Trim();
+        tracked.Email = string.IsNullOrWhiteSpace(editFormModel.Email) ? null : editFormModel.Email.Trim();
+        tracked.IsBaptized = editFormModel.IsBaptized;
+        tracked.BirthDay = editFormModel.BirthDay;
+        tracked.BirthMonth = editFormModel.BirthMonth;
+
+        await db.SaveChangesAsync();
+
+        editingMember = null;
         await LoadMembers();
     }
 

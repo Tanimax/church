@@ -2,7 +2,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace ChurchAttendance.Components.Pages.Admin;
 
-// Shared by MemberAdd.razor and MemberEdit.razor.
+// Shared by the add and edit modals in Members.razor.
 public class MemberFormModel : IValidatableObject
 {
     [Required(ErrorMessage = "Le prénom est requis.")]

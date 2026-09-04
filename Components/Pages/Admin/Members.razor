@@ -218,6 +218,34 @@
     <div class="modal-backdrop fade show"></div>
 }
 
+@if (viewingCardMember is not null)
+{
+    <div class="modal fade show d-block" tabindex="-1" role="dialog" @onclick="CloseCardModal">
+        <div class="modal-dialog" role="document" @onclick:stopPropagation="true">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Carte de @viewingCardMember.FullName</h5>
+                    <button type="button" class="btn-close" aria-label="Fermer" @onclick="CloseCardModal"></button>
+                </div>
+                <div class="modal-body text-center">
+                    <img src="/api/members/@viewingCardMember.Token/qr.png" alt="QR code" style="max-width:220px" />
+                    <div class="input-group mt-3">
+                        <input type="text" class="form-control" readonly value="@CardUrl(viewingCardMember.Token)" />
+                        <button type="button" class="btn btn-outline-secondary"
+                                data-url="@CardUrl(viewingCardMember.Token)" onclick="copyToClipboard(this)">
+                            Copier le lien
+                        </button>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-primary" @onclick="CloseCardModal">Fermer</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal-backdrop fade show"></div>
+}
+
 @if (members is null)
 {
     <p><em>Chargement...</em></p>
@@ -229,7 +257,7 @@ else if (!filteredMembers.Any())
 else
 {
     <div class="table-responsive">
-        <table class="table table-striped align-middle" style="min-width:900px;">
+        <table class="table table-striped align-middle" style="min-width:800px;">
             <colgroup>
                 <col style="width:40px" />
                 <col style="width:110px" />
@@ -238,7 +266,7 @@ else
                 <col style="width:110px" />
                 <col style="width:90px" />
                 <col style="width:90px" />
-                <col style="width:340px" />
+                <col style="width:260px" />
             </colgroup>
             <thead>
                 <tr>
@@ -289,13 +317,11 @@ else
                         </td>
                         <td>
                             <div class="d-flex flex-wrap gap-2 align-items-center">
-                                <a href="/card/@member.Token" target="_blank">Voir la carte</a>
+                                <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="() => OpenCardModal(member)">
+                                    Voir la carte
+                                </button>
                                 <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="() => OpenEditModal(member)">
                                     Modifier
-                                </button>
-                                <button type="button" class="btn btn-sm btn-outline-secondary"
-                                        data-url="@CardUrl(member.Token)" onclick="copyToClipboard(this)">
-                                    Copier le lien
                                 </button>
                                 <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="() => ToggleActive(member)">
                                     @(member.IsActive ? "Désactiver" : "Réactiver")
@@ -353,6 +379,8 @@ else
 
     private Member? editingMember;
     private MemberFormModel editFormModel = new();
+
+    private Member? viewingCardMember;
 
     private string CardUrl(string token) => $"{Nav.BaseUri.TrimEnd('/')}/card/{token}";
 
@@ -495,6 +523,10 @@ else
     }
 
     private void CloseEditModal() => editingMember = null;
+
+    private void OpenCardModal(Member member) => viewingCardMember = member;
+
+    private void CloseCardModal() => viewingCardMember = null;
 
     private async Task HandleEditSubmit()
     {

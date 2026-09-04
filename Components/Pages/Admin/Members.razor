@@ -30,6 +30,9 @@
             <a class="btn btn-outline-secondary" href="@GenerateCardsUrl" target="_blank">
                 Générer les cartes (@selectedIds.Count)
             </a>
+            <button type="button" class="btn btn-outline-secondary" @onclick="ClearSelection">
+                Désélectionner tout
+            </button>
         }
         <a class="btn btn-outline-secondary" href="@ExportUrl" target="_blank">Exporter en Excel</a>
         <button type="button" class="btn btn-primary" @onclick="OpenAddModal">+ Ajouter un membre</button>
@@ -301,6 +304,10 @@ else
             }
         }
     }
+
+    // Selection persists across pages, so clearing it needs to be independent of what's
+    // currently visible — the header checkbox only toggles the current page.
+    private void ClearSelection() => selectedIds.Clear();
 
     private bool? baptizedFilter => baptizedFilterValue switch
     {

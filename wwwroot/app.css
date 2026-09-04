@@ -111,12 +111,27 @@ a, .btn-link {
 .table-responsive {
     border: 1px solid var(--line);
     border-radius: 12px;
-    overflow: hidden;
+    /* overflow: hidden here (instead of Bootstrap's default overflow-x: auto) would clip the
+       square table corners cleanly against this rounded container — but it also silently kills
+       horizontal scrolling, so on narrow viewports the browser has nowhere to put content that
+       doesn't fit and crushes/wraps every column instead. overflow-x: auto restores the scroll;
+       overflow-y: hidden keeps the top/bottom corners clipped the way they were. */
+    overflow-x: auto;
+    overflow-y: hidden;
 }
 
 .table {
     color: var(--text-primary);
     margin-bottom: 0;
+}
+
+/* Without this, a table squeezed by a narrower container (e.g. a phone screen) wraps every
+   cell's text instead of keeping its natural width and scrolling — which on tables with no
+   explicit column widths reads as half the row heights suddenly tripling and dates/labels
+   breaking mid-word. Letting .table-responsive's horizontal scroll (see above) be the escape
+   valve instead keeps every row a single, readable line. */
+.table td, .table th {
+    white-space: nowrap;
 }
 
 .table thead th {

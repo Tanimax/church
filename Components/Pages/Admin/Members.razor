@@ -25,6 +25,12 @@
         </select>
     </div>
     <div class="d-flex gap-2">
+        @if (selectedIds.Count > 0)
+        {
+            <a class="btn btn-outline-secondary" href="@GenerateCardsUrl" target="_blank">
+                Générer les cartes (@selectedIds.Count)
+            </a>
+        }
         <a class="btn btn-outline-secondary" href="@ExportUrl" target="_blank">Exporter en Excel</a>
         <button type="button" class="btn btn-primary" @onclick="OpenAddModal">+ Ajouter un membre</button>
     </div>
@@ -144,16 +150,21 @@ else
     <div class="table-responsive">
         <table class="table table-striped align-middle">
             <colgroup>
-                <col style="width:11%" />
-                <col style="width:11%" />
-                <col style="width:13%" />
+                <col style="width:4%" />
                 <col style="width:10%" />
+                <col style="width:10%" />
+                <col style="width:12%" />
+                <col style="width:9%" />
                 <col style="width:8%" />
                 <col style="width:9%" />
                 <col style="width:38%" />
             </colgroup>
             <thead>
                 <tr>
+                    <th>
+                        <input type="checkbox" class="form-check-input" title="Tout sélectionner (page courante)"
+                               checked="@AreAllVisibleSelected" @onchange="ToggleSelectAllVisible" />
+                    </th>
                     <th>Nom</th>
                     <th>Prénom</th>
                     <th>Téléphone</th>
@@ -167,6 +178,10 @@ else
                 @foreach (var member in pagedMembers)
                 {
                     <tr>
+                        <td>
+                            <input type="checkbox" class="form-check-input" checked="@selectedIds.Contains(member.Id)"
+                                   @onchange="() => ToggleSelect(member.Id)" />
+                        </td>
                         <td>@member.LastName</td>
                         <td>@member.FirstName</td>
                         <td>@member.Phone</td>
@@ -246,6 +261,8 @@ else
     private int currentPage = 1;
     private int pageSize = 10;
 
+    private HashSet<int> selectedIds = new();
+
     private bool showAddModal;
     private MemberFormModel addFormModel = new();
     private Member? addCreatedMember;
@@ -254,6 +271,36 @@ else
     private string CardUrl(string token) => $"{Nav.BaseUri.TrimEnd('/')}/card/{token}";
 
     private string ExportUrl => $"/admin/members/export.csv?search={Uri.EscapeDataString(searchTerm)}&baptized={baptizedFilterValue}&active={activeFilterValue}";
+
+    private string GenerateCardsUrl => "/admin/members/cards.zip?" + string.Join('&', selectedIds.Select(id => $"ids={id}"));
+
+    private bool AreAllVisibleSelected => pagedMembers.Any() && pagedMembers.All(m => selectedIds.Contains(m.Id));
+
+    private void ToggleSelect(int memberId)
+    {
+        if (!selectedIds.Add(memberId))
+        {
+            selectedIds.Remove(memberId);
+        }
+    }
+
+    private void ToggleSelectAllVisible()
+    {
+        if (AreAllVisibleSelected)
+        {
+            foreach (var member in pagedMembers)
+            {
+                selectedIds.Remove(member.Id);
+            }
+        }
+        else
+        {
+            foreach (var member in pagedMembers)
+            {
+                selectedIds.Add(member.Id);
+            }
+        }
+    }
 
     private bool? baptizedFilter => baptizedFilterValue switch
     {

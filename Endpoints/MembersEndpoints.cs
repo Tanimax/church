@@ -99,5 +99,25 @@ public static class MembersEndpoints
 
             return Results.File(bytes, "text/csv", $"membres_{DateTime.Now:yyyyMMdd}.csv");
         }).RequireAuthorization();
+
+        app.MapGet("/admin/members/cards.zip", async (int[] ids, AppDbContext db, HttpRequest httpRequest, IWebHostEnvironment env) =>
+        {
+            if (ids.Length == 0)
+            {
+                return Results.BadRequest(new { error = "Aucun membre sélectionné." });
+            }
+
+            var members = await db.Members
+                .Where(m => ids.Contains(m.Id))
+                .OrderBy(m => m.LastName).ThenBy(m => m.FirstName)
+                .ToListAsync();
+
+            var baseUrl = $"{httpRequest.Scheme}://{httpRequest.Host}";
+            var zip = MemberCardZipService.BuildZip(
+                members.Select(m => (m.FullName, $"{baseUrl}/card/{m.Token}")),
+                env.WebRootPath);
+
+            return Results.File(zip, "application/zip", $"cartes_{DateTime.Now:yyyyMMdd}.zip");
+        }).RequireAuthorization();
     }
 }

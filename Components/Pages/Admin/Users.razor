@@ -65,6 +65,59 @@
     <div class="modal-backdrop fade show"></div>
 }
 
+@if (editingUser is not null)
+{
+    <div class="modal fade show d-block" tabindex="-1" role="dialog" @onclick="CloseEditModal">
+        <div class="modal-dialog" role="document" @onclick:stopPropagation="true">
+            <div class="modal-content">
+                <EditForm Model="editFormModel" OnValidSubmit="HandleEditSubmit">
+                    <DataAnnotationsValidator />
+                    <div class="modal-header">
+                        <h5 class="modal-title">Modifier @editingUser.Username</h5>
+                        <button type="button" class="btn-close" aria-label="Fermer" @onclick="CloseEditModal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <ValidationSummary />
+                        @if (!string.IsNullOrWhiteSpace(editError))
+                        {
+                            <div class="alert alert-danger">@editError</div>
+                        }
+
+                        <div class="mb-3">
+                            <label class="form-label">Nom d'utilisateur</label>
+                            <InputText class="form-control" @bind-Value="editFormModel.Username" autocomplete="off" />
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Nouveau mot de passe (laisser vide pour ne pas changer)</label>
+                            <InputText type="password" class="form-control" @bind-Value="editFormModel.Password" autocomplete="new-password" />
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Rôle</label>
+                            <InputSelect class="form-select" @bind-Value="editFormModel.Role">
+                                <option value="Secretaire">Secrétaire</option>
+                                <option value="EcoleDominicale">École Dominicale</option>
+                                <option value="Admin">Administrateur</option>
+                            </InputSelect>
+                        </div>
+
+                        <div class="mb-3 form-check">
+                            <InputCheckbox class="form-check-input" id="editIsActive" @bind-Value="editFormModel.IsActive" />
+                            <label class="form-check-label" for="editIsActive">Actif</label>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-link" @onclick="CloseEditModal">Annuler</button>
+                        <button type="submit" class="btn btn-primary">Enregistrer</button>
+                    </div>
+                </EditForm>
+            </div>
+        </div>
+    </div>
+    <div class="modal-backdrop fade show"></div>
+}
+
 @if (users is null)
 {
     <p><em>Chargement...</em></p>
@@ -79,6 +132,9 @@ else
                     <th>Rôle</th>
                     <th>Statut</th>
                     <th>Créé le</th>
+                    <AuthorizeView Roles="Admin" Context="colAuthContext">
+                        <Authorized><th>Actions</th></Authorized>
+                    </AuthorizeView>
                 </tr>
             </thead>
             <tbody>
@@ -105,6 +161,15 @@ else
                             }
                         </td>
                         <td>@user.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy")</td>
+                        <AuthorizeView Roles="Admin" Context="rowAuthContext">
+                            <Authorized>
+                                <td>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="() => OpenEditModal(user)">
+                                        Modifier
+                                    </button>
+                                </td>
+                            </Authorized>
+                        </AuthorizeView>
                     </tr>
                 }
             </tbody>
@@ -120,6 +185,10 @@ else
     private bool showAddModal;
     private AddUserFormModel addFormModel = new();
     private string? addError;
+
+    private User? editingUser;
+    private EditUserFormModel editFormModel = new();
+    private string? editError;
 
     protected override async Task OnInitializedAsync() => await LoadUsers();
 
@@ -154,6 +223,75 @@ else
     }
 
     private void CloseAddModal() => showAddModal = false;
+
+    private async Task OpenEditModal(User user)
+    {
+        if (!await CurrentUserIsAdminAsync())
+        {
+            return;
+        }
+
+        editingUser = user;
+        editFormModel = new EditUserFormModel
+        {
+            Username = user.Username,
+            Role = user.Role,
+            IsActive = user.IsActive
+        };
+        editError = null;
+    }
+
+    private void CloseEditModal() => editingUser = null;
+
+    private async Task HandleEditSubmit()
+    {
+        if (editingUser is null)
+        {
+            return;
+        }
+
+        if (!await CurrentUserIsAdminAsync())
+        {
+            editError = "Seul un administrateur peut modifier un utilisateur.";
+            return;
+        }
+
+        if (!string.IsNullOrEmpty(editFormModel.Password) && editFormModel.Password.Length < 8)
+        {
+            editError = "Le mot de passe doit contenir au moins 8 caractères.";
+            return;
+        }
+
+        await using var db = await DbFactory.CreateDbContextAsync();
+        var tracked = await db.Users.FindAsync(editingUser.Id);
+        if (tracked is null)
+        {
+            editingUser = null;
+            await LoadUsers();
+            return;
+        }
+
+        var normalizedUsername = UserService.NormalizeUsername(editFormModel.Username);
+        var usernameTaken = await db.Users.AnyAsync(u => u.Id != editingUser.Id && u.Username == normalizedUsername);
+        if (usernameTaken)
+        {
+            editError = "Ce nom d'utilisateur existe déjà.";
+            return;
+        }
+
+        tracked.Username = normalizedUsername;
+        tracked.Role = editFormModel.Role;
+        tracked.IsActive = editFormModel.IsActive;
+        if (!string.IsNullOrEmpty(editFormModel.Password))
+        {
+            tracked.PasswordHash = UserService.HashPassword(editFormModel.Password);
+        }
+
+        await db.SaveChangesAsync();
+
+        editingUser = null;
+        await LoadUsers();
+    }
 
     private async Task HandleAddSubmit()
     {
@@ -197,5 +335,18 @@ else
         public string Password { get; set; } = "";
 
         public UserRole Role { get; set; } = UserRole.Secretaire;
+    }
+
+    private class EditUserFormModel
+    {
+        [Required(ErrorMessage = "Le nom d'utilisateur est requis.")]
+        [StringLength(50, ErrorMessage = "Le nom d'utilisateur ne peut pas dépasser 50 caractères.")]
+        public string Username { get; set; } = "";
+
+        public string Password { get; set; } = "";
+
+        public UserRole Role { get; set; } = UserRole.Secretaire;
+
+        public bool IsActive { get; set; } = true;
     }
 }

@@ -15,8 +15,9 @@ public static class AuthEndpoints
         app.MapGet("/admin/login", (HttpRequest request) =>
         {
             var hasError = request.Query.ContainsKey("error");
+            var isIdleLogout = request.Query.ContainsKey("idle");
             var returnUrl = request.Query["returnUrl"].ToString();
-            return Results.Text(BuildLoginHtml(hasError, returnUrl), "text/html");
+            return Results.Text(BuildLoginHtml(hasError, isIdleLogout, returnUrl), "text/html");
         });
 
         app.MapPost("/admin/login", async (HttpContext context, AppDbContext db) =>
@@ -72,11 +73,13 @@ public static class AuthEndpoints
     private static bool IsSafeLocalReturnUrl(string? returnUrl) =>
         !string.IsNullOrEmpty(returnUrl) && returnUrl.StartsWith('/') && !returnUrl.StartsWith("//");
 
-    private static string BuildLoginHtml(bool hasError, string? returnUrl = null)
+    private static string BuildLoginHtml(bool hasError, bool isIdleLogout = false, string? returnUrl = null)
     {
         var errorHtml = hasError
             ? "<p class=\"error\">Nom d'utilisateur ou mot de passe incorrect.</p>"
-            : "";
+            : isIdleLogout
+                ? "<p class=\"notice\">Vous avez été déconnecté après une période d'inactivité.</p>"
+                : "";
 
         var returnUrlInput = IsSafeLocalReturnUrl(returnUrl)
             ? $"""<input type="hidden" name="returnUrl" value="{WebUtility.HtmlEncode(returnUrl)}" />"""
@@ -102,6 +105,7 @@ public static class AuthEndpoints
                     button { width: 100%; padding: 0.75rem; background: #a8763a; color: #201304; border: none; border-radius: 6px; font-size: 1rem; font-weight: 600; cursor: pointer; }
                     button:hover { background: #8a5f28; }
                     .error { color: #dc2626; }
+                    .notice { color: #1b2436; }
                 </style>
             </head>
             <body>

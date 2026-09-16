@@ -144,6 +144,58 @@ public class AuthEndpointsTests
     }
 
     [Fact]
+    public async Task LoginPage_Default_DoesNotShowIdleNotice()
+    {
+        using var factory = new CustomWebApplicationFactory();
+        var client = factory.CreateClient();
+
+        var html = await client.GetStringAsync("/admin/login");
+
+        Assert.DoesNotContain("déconnecté après une période d'inactivité", html);
+    }
+
+    [Fact]
+    public async Task LoginPage_WithIdleQueryParam_ShowsIdleNotice()
+    {
+        using var factory = new CustomWebApplicationFactory();
+        var client = factory.CreateClient();
+
+        var html = await client.GetStringAsync("/admin/login?idle=1");
+
+        Assert.Contains("déconnecté après une période d'inactivité", html);
+    }
+
+    [Fact]
+    public async Task LoginPage_WithErrorAndIdleQueryParams_ShowsErrorNotIdleNotice()
+    {
+        using var factory = new CustomWebApplicationFactory();
+        var client = factory.CreateClient();
+
+        var html = await client.GetStringAsync("/admin/login?error=1&idle=1");
+
+        Assert.Contains("incorrect", html);
+        Assert.DoesNotContain("déconnecté après une période d'inactivité", html);
+    }
+
+    [Fact]
+    public async Task Logout_EndsSession_SubsequentRequestToAuthorizedPageRedirectsToLogin()
+    {
+        using var factory = new CustomWebApplicationFactory();
+        var client = await TestAuth.CreateAuthenticatedClientAsync(factory);
+
+        var beforeLogout = await client.GetAsync("/admin/members");
+        Assert.Equal(HttpStatusCode.OK, beforeLogout.StatusCode);
+
+        var logoutResponse = await client.PostAsync("/admin/logout", content: null);
+        Assert.Equal(HttpStatusCode.Redirect, logoutResponse.StatusCode);
+        Assert.StartsWith("/admin/login", logoutResponse.Headers.Location?.ToString());
+
+        var afterLogout = await client.GetAsync("/admin/members");
+        Assert.Equal(HttpStatusCode.Redirect, afterLogout.StatusCode);
+        Assert.Contains("/admin/login", afterLogout.Headers.Location?.ToString());
+    }
+
+    [Fact]
     public async Task BootstrapAdmin_IsSeededExactlyOnceOnFreshDatabase()
     {
         using var factory = new CustomWebApplicationFactory();

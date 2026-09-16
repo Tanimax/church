@@ -2,6 +2,7 @@ using System.Net.Http.Json;
 using ChurchAttendance.Data;
 using ChurchAttendance.Endpoints;
 using ChurchAttendance.Models;
+using ChurchAttendance.Services;
 using ChurchAttendance.Tests.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 
@@ -182,6 +183,56 @@ public class CheckInEndpointsTests
         var attendances = await verifyDb.Attendances.ToListAsync();
         Assert.Single(attendances);
         Assert.Equal(AttendanceType.EcoleDominicale, attendances[0].Type);
+    }
+
+    [Fact]
+    public async Task CheckIn_SainteCeneAlreadyScannedByOneUser_SecondUserGetsDuplicateAndCardIsNotDoubleCounted()
+    {
+        using var factory = new CustomWebApplicationFactory();
+        await using (var db = factory.CreateDbContext())
+        {
+            await SeedMemberAsync(db);
+            db.Users.Add(new User
+            {
+                Username = "secretaire1",
+                PasswordHash = UserService.HashPassword("secretaire-password"),
+                Role = UserRole.Secretaire,
+                CreatedAt = DateTime.UtcNow
+            });
+            db.Users.Add(new User
+            {
+                Username = "ecoledom1",
+                PasswordHash = UserService.HashPassword("ecoledom-password"),
+                Role = UserRole.EcoleDominicale,
+                CreatedAt = DateTime.UtcNow
+            });
+            await db.SaveChangesAsync();
+        }
+
+        // Two different logged-in users, e.g. two scanners running at the same Sainte Cène
+        // service — one already checked this card in, so the other must not be able to
+        // record it again for that same session.
+        var firstUserClient = await TestAuth.CreateAuthenticatedClientAsync(factory, "secretaire1", "secretaire-password");
+        var secondUserClient = await TestAuth.CreateAuthenticatedClientAsync(factory, "ecoledom1", "ecoledom-password");
+
+        using var firstScan = new StringContent(
+            """{"token":"member-token","type":"SainteCene"}""",
+            System.Text.Encoding.UTF8, "application/json");
+        var firstResponse = await firstUserClient.PostAsync("/api/checkin", firstScan);
+        var firstBody = await firstResponse.Content.ReadFromJsonAsync<CheckInResponse>();
+        Assert.Equal("ok", firstBody!.Status);
+
+        using var secondScan = new StringContent(
+            """{"token":"member-token","type":"SainteCene"}""",
+            System.Text.Encoding.UTF8, "application/json");
+        var secondResponse = await secondUserClient.PostAsync("/api/checkin", secondScan);
+        var secondBody = await secondResponse.Content.ReadFromJsonAsync<CheckInResponse>();
+        Assert.Equal("duplicate", secondBody!.Status);
+        Assert.Equal(firstBody.CheckedInAt, secondBody.CheckedInAt);
+
+        await using var verifyDb = factory.CreateDbContext();
+        var sainteCeneCount = await verifyDb.Attendances.CountAsync(a => a.Type == AttendanceType.SainteCene);
+        Assert.Equal(1, sainteCeneCount);
     }
 
     [Fact]

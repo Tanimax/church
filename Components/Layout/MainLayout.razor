@@ -1,4 +1,4 @@
-﻿@inherits LayoutComponentBase
+@inherits LayoutComponentBase
 
 <div class="page">
     <div class="sidebar">
@@ -10,6 +10,7 @@
             <AuthorizeView>
                 <Authorized>
                     <span>Connecté : @context.User.Identity?.Name</span>
+                    <ChangePasswordButton />
                     <form method="post" action="/admin/logout">
                         <button type="submit" class="btn btn-link p-0">Déconnexion</button>
                     </form>

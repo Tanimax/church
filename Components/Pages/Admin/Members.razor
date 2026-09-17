@@ -26,7 +26,11 @@
     </div>
     <div class="d-flex gap-2">
         <a class="btn btn-outline-secondary" href="@ExportUrl" target="_blank">Exporter en Excel</a>
-        <button type="button" class="btn btn-primary" @onclick="OpenAddModal">+ Ajouter un membre</button>
+        <AuthorizeView Roles="Admin,EcoleDominicale" Context="addAuthContext">
+            <Authorized>
+                <button type="button" class="btn btn-primary" @onclick="OpenAddModal">+ Ajouter un membre</button>
+            </Authorized>
+        </AuthorizeView>
     </div>
 </div>
 
@@ -320,9 +324,13 @@ else
                                 <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="() => OpenCardModal(member)">
                                     Voir la carte
                                 </button>
-                                <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="() => OpenEditModal(member)">
-                                    Modifier
-                                </button>
+                                <AuthorizeView Roles="Admin,EcoleDominicale" Context="editAuthContext">
+                                    <Authorized>
+                                        <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="() => OpenEditModal(member)">
+                                            Modifier
+                                        </button>
+                                    </Authorized>
+                                </AuthorizeView>
                                 <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="() => ToggleActive(member)">
                                     @(member.IsActive ? "Désactiver" : "Réactiver")
                                 </button>
@@ -362,6 +370,9 @@ else
 @code {
     private static readonly string[] MonthNames =
         { "", "Janvier", "Février", "Mars", "Avril", "Mai", "Juin", "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre" };
+
+    [CascadingParameter]
+    private Task<AuthenticationState>? AuthenticationStateTask { get; set; }
 
     private List<Member>? members;
     private string searchTerm = "";
@@ -463,8 +474,25 @@ else
         members = await db.Members.OrderBy(m => m.LastName).ThenBy(m => m.FirstName).ToListAsync();
     }
 
-    private void OpenAddModal()
+    private async Task<bool> CanManageMembersAsync()
     {
+        if (AuthenticationStateTask is null)
+        {
+            return false;
+        }
+        var authState = await AuthenticationStateTask;
+        return authState.User.IsInRole(nameof(UserRole.Admin)) || authState.User.IsInRole(nameof(UserRole.EcoleDominicale));
+    }
+
+    private async Task OpenAddModal()
+    {
+        // The button is already hidden from Secrétaire via AuthorizeView, but don't rely
+        // on that alone — verify server-side too before opening the mutating form.
+        if (!await CanManageMembersAsync())
+        {
+            return;
+        }
+
         addFormModel = new MemberFormModel();
         addCreatedMember = null;
         showAddModal = true;
@@ -480,6 +508,12 @@ else
 
     private async Task HandleAddSubmit()
     {
+        if (!await CanManageMembersAsync())
+        {
+            showAddModal = false;
+            return;
+        }
+
         await using var db = await DbFactory.CreateDbContextAsync();
         var member = new Member
         {
@@ -507,8 +541,15 @@ else
         await LoadMembers();
     }
 
-    private void OpenEditModal(Member member)
+    private async Task OpenEditModal(Member member)
     {
+        // The button is already hidden from Secrétaire via AuthorizeView, but don't rely
+        // on that alone — verify server-side too before opening the mutating form.
+        if (!await CanManageMembersAsync())
+        {
+            return;
+        }
+
         editingMember = member;
         editFormModel = new MemberFormModel
         {
@@ -532,6 +573,12 @@ else
     {
         if (editingMember is null)
         {
+            return;
+        }
+
+        if (!await CanManageMembersAsync())
+        {
+            editingMember = null;
             return;
         }
 

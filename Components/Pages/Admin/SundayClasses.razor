@@ -7,9 +7,13 @@
 
 <h1>École Dominicale</h1>
 
-<div class="d-flex justify-content-end mb-3">
-    <button type="button" class="btn btn-primary" @onclick="OpenAddModal">+ Ajouter une classe</button>
-</div>
+<AuthorizeView Roles="Admin,EcoleDominicale" Context="addAuthContext">
+    <Authorized>
+        <div class="d-flex justify-content-end mb-3">
+            <button type="button" class="btn btn-primary" @onclick="OpenAddModal">+ Ajouter une classe</button>
+        </div>
+    </Authorized>
+</AuthorizeView>
 
 @if (showAddModal)
 {
@@ -66,9 +70,13 @@ else
                         <td>@c.Name</td>
                         <td>@memberCounts.GetValueOrDefault(c.Id, 0)</td>
                         <td>
-                            <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="() => OpenManageModal(c)">
-                                Gérer
-                            </button>
+                            <AuthorizeView Roles="Admin,EcoleDominicale" Context="manageAuthContext">
+                                <Authorized>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="() => OpenManageModal(c)">
+                                        Gérer
+                                    </button>
+                                </Authorized>
+                            </AuthorizeView>
                         </td>
                     </tr>
                 }
@@ -149,6 +157,9 @@ else
 }
 
 @code {
+    [CascadingParameter]
+    private Task<AuthenticationState>? AuthenticationStateTask { get; set; }
+
     private List<SundayClass>? classes;
     private Dictionary<int, int> memberCounts = new();
 
@@ -192,8 +203,25 @@ else
             .ToDictionaryAsync(x => x.ClassId, x => x.Count);
     }
 
-    private void OpenAddModal()
+    private async Task<bool> CanManageClassesAsync()
     {
+        if (AuthenticationStateTask is null)
+        {
+            return false;
+        }
+        var authState = await AuthenticationStateTask;
+        return authState.User.IsInRole(nameof(UserRole.Admin)) || authState.User.IsInRole(nameof(UserRole.EcoleDominicale));
+    }
+
+    private async Task OpenAddModal()
+    {
+        // The button is already hidden from Secrétaire via AuthorizeView, but don't rely
+        // on that alone — verify server-side too before opening the mutating form.
+        if (!await CanManageClassesAsync())
+        {
+            return;
+        }
+
         addFormModel = new SundayClassFormModel();
         showAddModal = true;
     }
@@ -202,6 +230,12 @@ else
 
     private async Task HandleAddSubmit()
     {
+        if (!await CanManageClassesAsync())
+        {
+            showAddModal = false;
+            return;
+        }
+
         await using var db = await DbFactory.CreateDbContextAsync();
         db.SundayClasses.Add(new SundayClass
         {
@@ -216,6 +250,13 @@ else
 
     private async Task OpenManageModal(SundayClass c)
     {
+        // The button is already hidden from Secrétaire via AuthorizeView, but don't rely
+        // on that alone — verify server-side too before opening the mutating form.
+        if (!await CanManageClassesAsync())
+        {
+            return;
+        }
+
         managingClass = c;
         memberSearchTerm = "";
         await LoadAllMembers();
@@ -236,6 +277,7 @@ else
     private async Task AddMemberToClass(Member member)
     {
         if (managingClass is null) return;
+        if (!await CanManageClassesAsync()) return;
 
         await using var db = await DbFactory.CreateDbContextAsync();
         var tracked = await db.Members.FindAsync(member.Id);
@@ -252,6 +294,8 @@ else
 
     private async Task RemoveMemberFromClass(Member member)
     {
+        if (!await CanManageClassesAsync()) return;
+
         await using var db = await DbFactory.CreateDbContextAsync();
         var tracked = await db.Members.FindAsync(member.Id);
         if (tracked is not null)

@@ -1,107 +1,89 @@
 @page "/admin/sainte-cene-manuelle"
+@layout MobileLayout
 @attribute [Authorize]
 @rendermode InteractiveServer
 @inject IDbContextFactory<AppDbContext> DbFactory
 
 <PageTitle>Sainte Cène — Enregistrement manuel</PageTitle>
 
-<h1>Sainte Cène — Enregistrement manuel</h1>
-
 <AuthorizeView Roles="Admin,Secretaire" Context="authContext">
     <Authorized>
-        <p class="text-muted">
-            Pour les membres sans carte QR sous la main : recherchez leur nom et cliquez sur OK
-            pour enregistrer leur participation à la Sainte Cène d'aujourd'hui.
+        <h1 class="sc-title">Sainte Cène manuelle</h1>
+        <p class="sc-sub">
+            Pour les membres sans carte QR sous la main : recherchez leur nom et appuyez sur OK.
         </p>
 
         @if (!string.IsNullOrWhiteSpace(actionError))
         {
-            <div class="alert alert-danger">@actionError</div>
+            <div class="sc-error">@actionError</div>
         }
 
-        <div class="mb-3">
-            <input type="search" class="form-control w-auto" placeholder="Rechercher un membre par nom..."
-                   @bind="searchTerm" @bind:event="oninput" />
-        </div>
+        <input type="search" class="sc-search" placeholder="Rechercher un membre par nom..."
+               @bind="searchTerm" @bind:event="oninput" />
 
         @if (activeMembers is null)
         {
-            <p><em>Chargement...</em></p>
+            <p class="sc-hint"><em>Chargement...</em></p>
         }
         else if (searchTerm.Trim().Length < 2)
         {
-            <p class="text-muted">Tapez au moins 2 lettres du nom pour rechercher.</p>
+            <p class="sc-hint">Tapez au moins 2 lettres du nom pour rechercher.</p>
         }
         else if (searchResults.Count == 0)
         {
-            <p class="text-muted">Aucun membre actif ne correspond à "@searchTerm".</p>
+            <p class="sc-hint">Aucun membre actif ne correspond à "@searchTerm".</p>
         }
         else
         {
-            <div class="table-responsive">
-                <table class="table table-striped align-middle">
-                    <thead>
-                        <tr>
-                            <th>Nom</th>
-                            <th>Prénom</th>
-                            <th>Baptisé</th>
-                            <th>Statut</th>
-                            <th></th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach (var member in searchResults)
+            <div class="sc-list">
+                @foreach (var member in searchResults)
+                {
+                    var done = member.IsBaptized && sainteCeneToday.TryGetValue(member.Id, out var checkedInAt);
+                    <div class="sc-card @(done ? "sc-card-done" : "")">
+                        <div class="sc-card-name">@member.FirstName @member.LastName</div>
+                        <div class="sc-card-row">
+                            @if (member.IsBaptized)
+                            {
+                                <span class="sc-badge sc-badge-good">Baptisé</span>
+                            }
+                            else
+                            {
+                                <span class="sc-badge sc-badge-neutral">Non baptisé</span>
+                            }
+
+                            @if (!member.IsBaptized)
+                            {
+                                <span class="sc-status">Non disponible</span>
+                            }
+                            else if (sainteCeneToday.TryGetValue(member.Id, out var time))
+                            {
+                                <span class="sc-status sc-status-good">✓ Enregistré à @time.ToLocalTime().ToString("HH:mm")</span>
+                            }
+                            else
+                            {
+                                <span class="sc-status">Pas encore enregistré</span>
+                            }
+                        </div>
+
+                        @if (member.IsBaptized && !sainteCeneToday.ContainsKey(member.Id))
                         {
-                            <tr>
-                                <td>@member.LastName</td>
-                                <td>@member.FirstName</td>
-                                <td>
-                                    @if (member.IsBaptized)
-                                    {
-                                        <span class="badge bg-success">Oui</span>
-                                    }
-                                    else
-                                    {
-                                        <span class="badge bg-secondary">Non</span>
-                                    }
-                                </td>
-                                <td>
-                                    @if (!member.IsBaptized)
-                                    {
-                                        <span class="text-muted">Non disponible — membre non baptisé</span>
-                                    }
-                                    else if (sainteCeneToday.TryGetValue(member.Id, out var checkedInAt))
-                                    {
-                                        <span class="text-success">✓ Déjà enregistré à @checkedInAt.ToLocalTime().ToString("HH:mm")</span>
-                                    }
-                                    else
-                                    {
-                                        <span class="text-muted">Pas encore enregistré</span>
-                                    }
-                                </td>
-                                <td>
-                                    @if (member.IsBaptized && !sainteCeneToday.ContainsKey(member.Id))
-                                    {
-                                        <button type="button" class="btn btn-sm btn-primary"
-                                                disabled="@(checkingInMemberId == member.Id)"
-                                                @onclick="() => CheckInAsync(member)">
-                                            OK
-                                        </button>
-                                    }
-                                </td>
-                            </tr>
+                            <button type="button" class="sc-ok-btn"
+                                    disabled="@(checkingInMemberId == member.Id)"
+                                    @onclick="() => CheckInAsync(member)">
+                                @(checkingInMemberId == member.Id ? "..." : "OK")
+                            </button>
                         }
-                    </tbody>
-                </table>
+                    </div>
+                }
             </div>
             @if (searchResultsTotalCount > searchResults.Count)
             {
-                <p class="text-muted">@searchResultsTotalCount résultats — affinez la recherche pour voir les autres.</p>
+                <p class="sc-hint">@searchResultsTotalCount résultats — affinez la recherche pour voir les autres.</p>
             }
         }
     </Authorized>
     <NotAuthorized>
-        <p class="text-muted">Accès restreint aux secrétaires et administrateurs.</p>
+        <p class="sc-hint">Accès restreint aux secrétaires et administrateurs.</p>
     </NotAuthorized>
 </AuthorizeView>
 

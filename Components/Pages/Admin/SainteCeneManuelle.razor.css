@@ -1,0 +1,120 @@
+.sc-title {
+    font-size: 1.4rem;
+    margin: 0 0 4px;
+    color: var(--text-primary);
+}
+
+.sc-sub {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    margin: 0 0 16px;
+}
+
+.sc-error {
+    background: #fbe9e7;
+    color: #9c4a34;
+    border: 1px solid #e3b8ac;
+    border-radius: 10px;
+    padding: 10px 14px;
+    margin-bottom: 14px;
+    font-size: 0.9rem;
+}
+
+.sc-search {
+    width: 100%;
+    box-sizing: border-box;
+    font-size: 1.05rem;
+    padding: 14px 16px;
+    border: 1px solid var(--line-strong);
+    border-radius: 12px;
+    background: var(--surface);
+    color: var(--text-primary);
+    margin-bottom: 16px;
+}
+
+.sc-search:focus {
+    outline: 2px solid var(--brass-600);
+    outline-offset: 1px;
+}
+
+.sc-hint {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    padding: 8px 2px;
+}
+
+.sc-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.sc-card {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 14px 16px;
+}
+
+.sc-card-done {
+    background: var(--good-bg);
+    border-color: var(--good);
+}
+
+.sc-card-name {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 6px;
+}
+
+.sc-card-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 10px;
+}
+
+.sc-badge {
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    padding: 3px 9px;
+    border-radius: 999px;
+}
+
+.sc-badge-good {
+    background: var(--good-bg);
+    color: var(--good);
+}
+
+.sc-badge-neutral {
+    background: var(--neutral-bg);
+    color: var(--neutral-text);
+}
+
+.sc-status {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+}
+
+.sc-status-good {
+    color: var(--good);
+    font-weight: 600;
+}
+
+.sc-ok-btn {
+    width: 100%;
+    min-height: 48px;
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: #fff;
+    background: var(--brass-600);
+    border: none;
+    border-radius: 10px;
+}
+
+.sc-ok-btn:disabled {
+    opacity: 0.6;
+}

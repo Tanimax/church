@@ -26,6 +26,16 @@
             </NavLink>
         </div>
 
+        <AuthorizeView Roles="Admin,Secretaire">
+            <Authorized>
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="admin/sainte-cene-manuelle">
+                        <span class="bi bi-person-check-fill-nav-menu" aria-hidden="true"></span> Sainte Cène manuelle
+                    </NavLink>
+                </div>
+            </Authorized>
+        </AuthorizeView>
+
         <div class="nav-item px-3">
             <NavLink class="nav-link" href="admin/reports/visiteurs">
                 <span class="bi bi-person-plus-fill-nav-menu" aria-hidden="true"></span> Rapport Visiteurs

@@ -1,0 +1,78 @@
+using ChurchAttendance.Data;
+using ChurchAttendance.Models;
+using Microsoft.EntityFrameworkCore;
+
+namespace ChurchAttendance.Services;
+
+public record CheckInResponse(string Status, string? FullName, DateTime? CheckedInAt);
+
+public static class CheckInService
+{
+    public static async Task<CheckInResponse> CheckInMemberAsync(AppDbContext db, Member member, AttendanceType type)
+    {
+        if (type == AttendanceType.SainteCene && !member.IsBaptized)
+        {
+            return new CheckInResponse("not_baptized", member.FullName, null);
+        }
+
+        var today = DateOnly.FromDateTime(DateTime.Now);
+        var session = await db.ServiceSessions.FirstOrDefaultAsync(s => s.Date == today);
+        if (session is null)
+        {
+            session = new ServiceSession { Date = today, Label = "Culte du dimanche" };
+            db.ServiceSessions.Add(session);
+            await db.SaveChangesAsync();
+        }
+
+        var response = await RecordAttendance(db, member, session, type);
+
+        // Being present at Sainte Cène implies being present at the regular service
+        // that day — auto-record a Culte attendance too, unless one already exists.
+        if (type == AttendanceType.SainteCene)
+        {
+            var hasCulte = await db.Attendances.AnyAsync(a =>
+                a.MemberId == member.Id && a.ServiceSessionId == session.Id && a.Type == AttendanceType.Culte);
+            if (!hasCulte)
+            {
+                await RecordAttendance(db, member, session, AttendanceType.Culte, "Auto (Sainte Cène)");
+            }
+        }
+
+        return response;
+    }
+
+    private static async Task<CheckInResponse> RecordAttendance(
+        AppDbContext db, Member member, ServiceSession session, AttendanceType type, string? checkedInBy = null)
+    {
+        var existing = await db.Attendances
+            .FirstOrDefaultAsync(a => a.MemberId == member.Id && a.ServiceSessionId == session.Id && a.Type == type);
+
+        if (existing is not null)
+        {
+            return new CheckInResponse("duplicate", member.FullName, existing.CheckedInAt);
+        }
+
+        var attendance = new Attendance
+        {
+            MemberId = member.Id,
+            ServiceSessionId = session.Id,
+            CheckedInAt = DateTime.UtcNow,
+            Type = type,
+            CheckedInBy = checkedInBy
+        };
+        db.Attendances.Add(attendance);
+
+        try
+        {
+            await db.SaveChangesAsync();
+        }
+        catch (DbUpdateException)
+        {
+            var raced = await db.Attendances
+                .FirstOrDefaultAsync(a => a.MemberId == member.Id && a.ServiceSessionId == session.Id && a.Type == type);
+            return new CheckInResponse("duplicate", member.FullName, raced?.CheckedInAt);
+        }
+
+        return new CheckInResponse("ok", member.FullName, attendance.CheckedInAt);
+    }
+}

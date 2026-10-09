@@ -1,0 +1,203 @@
+@page "/admin/sainte-cene-manuelle"
+@attribute [Authorize]
+@rendermode InteractiveServer
+@inject IDbContextFactory<AppDbContext> DbFactory
+
+<PageTitle>Sainte Cène — Enregistrement manuel</PageTitle>
+
+<h1>Sainte Cène — Enregistrement manuel</h1>
+
+<AuthorizeView Roles="Admin,Secretaire" Context="authContext">
+    <Authorized>
+        <p class="text-muted">
+            Pour les membres sans carte QR sous la main : recherchez leur nom et cliquez sur OK
+            pour enregistrer leur participation à la Sainte Cène d'aujourd'hui.
+        </p>
+
+        @if (!string.IsNullOrWhiteSpace(actionError))
+        {
+            <div class="alert alert-danger">@actionError</div>
+        }
+
+        <div class="mb-3">
+            <input type="search" class="form-control w-auto" placeholder="Rechercher un membre par nom..."
+                   @bind="searchTerm" @bind:event="oninput" />
+        </div>
+
+        @if (activeMembers is null)
+        {
+            <p><em>Chargement...</em></p>
+        }
+        else if (searchTerm.Trim().Length < 2)
+        {
+            <p class="text-muted">Tapez au moins 2 lettres du nom pour rechercher.</p>
+        }
+        else if (searchResults.Count == 0)
+        {
+            <p class="text-muted">Aucun membre actif ne correspond à "@searchTerm".</p>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table table-striped align-middle">
+                    <thead>
+                        <tr>
+                            <th>Nom</th>
+                            <th>Prénom</th>
+                            <th>Baptisé</th>
+                            <th>Statut</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var member in searchResults)
+                        {
+                            <tr>
+                                <td>@member.LastName</td>
+                                <td>@member.FirstName</td>
+                                <td>
+                                    @if (member.IsBaptized)
+                                    {
+                                        <span class="badge bg-success">Oui</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-secondary">Non</span>
+                                    }
+                                </td>
+                                <td>
+                                    @if (!member.IsBaptized)
+                                    {
+                                        <span class="text-muted">Non disponible — membre non baptisé</span>
+                                    }
+                                    else if (sainteCeneToday.TryGetValue(member.Id, out var checkedInAt))
+                                    {
+                                        <span class="text-success">✓ Déjà enregistré à @checkedInAt.ToLocalTime().ToString("HH:mm")</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">Pas encore enregistré</span>
+                                    }
+                                </td>
+                                <td>
+                                    @if (member.IsBaptized && !sainteCeneToday.ContainsKey(member.Id))
+                                    {
+                                        <button type="button" class="btn btn-sm btn-primary"
+                                                disabled="@(checkingInMemberId == member.Id)"
+                                                @onclick="() => CheckInAsync(member)">
+                                            OK
+                                        </button>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+            @if (searchResultsTotalCount > searchResults.Count)
+            {
+                <p class="text-muted">@searchResultsTotalCount résultats — affinez la recherche pour voir les autres.</p>
+            }
+        }
+    </Authorized>
+    <NotAuthorized>
+        <p class="text-muted">Accès restreint aux secrétaires et administrateurs.</p>
+    </NotAuthorized>
+</AuthorizeView>
+
+@code {
+    private const int MaxResults = 25;
+
+    [CascadingParameter]
+    private Task<AuthenticationState>? AuthenticationStateTask { get; set; }
+
+    private List<Member>? activeMembers;
+    private Dictionary<int, DateTime> sainteCeneToday = new();
+    private string searchTerm = "";
+    private string? actionError;
+    private int? checkingInMemberId;
+
+    private IEnumerable<Member> MatchingMembers =>
+        activeMembers is null || searchTerm.Trim().Length < 2
+            ? []
+            : activeMembers
+                .Where(m => m.FullName.Contains(searchTerm, StringComparison.OrdinalIgnoreCase))
+                .OrderBy(m => m.LastName).ThenBy(m => m.FirstName);
+
+    private List<Member> searchResults => MatchingMembers.Take(MaxResults).ToList();
+
+    private int searchResultsTotalCount => MatchingMembers.Count();
+
+    protected override async Task OnInitializedAsync() => await LoadDataAsync();
+
+    private async Task LoadDataAsync()
+    {
+        await using var db = await DbFactory.CreateDbContextAsync();
+        activeMembers = await db.Members.Where(m => m.IsActive).ToListAsync();
+
+        var today = DateOnly.FromDateTime(DateTime.Now);
+        var todaySessionId = await db.ServiceSessions
+            .Where(s => s.Date == today)
+            .Select(s => s.Id)
+            .FirstOrDefaultAsync();
+
+        sainteCeneToday = todaySessionId == 0
+            ? new()
+            : await db.Attendances
+                .Where(a => a.ServiceSessionId == todaySessionId && a.Type == AttendanceType.SainteCene)
+                .ToDictionaryAsync(a => a.MemberId, a => a.CheckedInAt);
+    }
+
+    private async Task<bool> CanRecordSainteCeneAsync()
+    {
+        if (AuthenticationStateTask is null)
+        {
+            return false;
+        }
+        var authState = await AuthenticationStateTask;
+        return authState.User.IsInRole(nameof(UserRole.Admin)) || authState.User.IsInRole(nameof(UserRole.Secretaire));
+    }
+
+    private async Task CheckInAsync(Member member)
+    {
+        actionError = null;
+
+        // The button is already hidden from École Dominicale via AuthorizeView, but don't
+        // rely on that alone — verify server-side too before performing the mutation.
+        if (!await CanRecordSainteCeneAsync())
+        {
+            actionError = "Seuls les secrétaires et administrateurs peuvent enregistrer une présence.";
+            return;
+        }
+
+        checkingInMemberId = member.Id;
+        try
+        {
+            await using var db = await DbFactory.CreateDbContextAsync();
+            var tracked = await db.Members.FirstOrDefaultAsync(m => m.Id == member.Id && m.IsActive);
+            if (tracked is null)
+            {
+                actionError = $"{member.FullName} n'est plus un membre actif.";
+                await LoadDataAsync();
+                return;
+            }
+
+            var response = await CheckInService.CheckInMemberAsync(db, tracked, AttendanceType.SainteCene);
+
+            if (response.CheckedInAt.HasValue)
+            {
+                // Covers both "ok" and "duplicate" — either way the member is now checked in.
+                sainteCeneToday[member.Id] = response.CheckedInAt.Value;
+            }
+            else if (response.Status == "not_baptized")
+            {
+                actionError = $"{member.FullName} n'est pas baptisé(e) — Sainte Cène non disponible.";
+                member.IsBaptized = tracked.IsBaptized;
+            }
+        }
+        finally
+        {
+            checkingInMemberId = null;
+        }
+    }
+}

@@ -1,6 +1,6 @@
 using System.Net;
+using ChurchAttendance.Features.Users;
 using ChurchAttendance.Models;
-using ChurchAttendance.Services;
 using ChurchAttendance.Tests.Infrastructure;
 using Microsoft.AspNetCore.Mvc.Testing;
 

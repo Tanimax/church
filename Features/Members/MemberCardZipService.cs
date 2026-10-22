@@ -1,6 +1,6 @@
 using System.IO.Compression;
 
-namespace ChurchAttendance.Services;
+namespace ChurchAttendance.Features.Members;
 
 public static class MemberCardZipService
 {

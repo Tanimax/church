@@ -1,8 +1,8 @@
 using System.Text;
+using ChurchAttendance.Common;
 using ChurchAttendance.Data;
-using ChurchAttendance.Services;
 
-namespace ChurchAttendance.Endpoints;
+namespace ChurchAttendance.Features.Reports;
 
 public static class ReportsEndpoints
 {

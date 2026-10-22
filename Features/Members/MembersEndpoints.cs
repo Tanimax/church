@@ -1,9 +1,9 @@
+using ChurchAttendance.Common;
 using ChurchAttendance.Data;
 using ChurchAttendance.Models;
-using ChurchAttendance.Services;
 using Microsoft.EntityFrameworkCore;
 
-namespace ChurchAttendance.Endpoints;
+namespace ChurchAttendance.Features.Members;
 
 public record CreateMemberRequest(string FirstName, string LastName, string? Phone);
 

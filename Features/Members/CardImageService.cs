@@ -1,11 +1,12 @@
+using ChurchAttendance.Common;
 using SixLabors.Fonts;
-using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.Drawing;
 using SixLabors.ImageSharp.Drawing.Processing;
+using SixLabors.ImageSharp.Drawing;
 using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
+using SixLabors.ImageSharp;
 
-namespace ChurchAttendance.Services;
+namespace ChurchAttendance.Features.Members;
 
 public static class CardImageService
 {

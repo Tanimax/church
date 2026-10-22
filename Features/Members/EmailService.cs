@@ -1,7 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
 
-namespace ChurchAttendance.Services;
+namespace ChurchAttendance.Features.Members;
 
 public class EmailService(HttpClient httpClient, IConfiguration config, ILogger<EmailService> logger)
 {

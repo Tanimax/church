@@ -1,8 +1,7 @@
 using System.Text.Json.Serialization;
 using ChurchAttendance.Components;
-using ChurchAttendance.Endpoints;
+using ChurchAttendance.Features.Members;
 using ChurchAttendance.Infrastructure;
-using ChurchAttendance.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 

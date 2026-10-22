@@ -1,7 +1,7 @@
 using ChurchAttendance.Data;
 using Microsoft.EntityFrameworkCore;
 
-namespace ChurchAttendance.Services;
+namespace ChurchAttendance.Features.Reports;
 
 public record SundayPresence(int MemberId, string FullName, DateOnly Date, DateTime CheckedInAt);
 

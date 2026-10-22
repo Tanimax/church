@@ -2,7 +2,7 @@ using System.Net;
 using ChurchAttendance.Data;
 using Microsoft.EntityFrameworkCore;
 
-namespace ChurchAttendance.Endpoints;
+namespace ChurchAttendance.Features.Members;
 
 public static class CardEndpoints
 {

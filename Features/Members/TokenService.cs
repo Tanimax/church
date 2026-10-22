@@ -1,6 +1,6 @@
 using System.Security.Cryptography;
 
-namespace ChurchAttendance.Services;
+namespace ChurchAttendance.Features.Members;
 
 public static class TokenService
 {

@@ -1,4 +1,9 @@
-namespace ChurchAttendance.Endpoints;
+using ChurchAttendance.Features.CheckIn;
+using ChurchAttendance.Features.Members;
+using ChurchAttendance.Features.Reports;
+using ChurchAttendance.Features.Users;
+using ChurchAttendance.Features.Visitors;
+namespace ChurchAttendance.Infrastructure;
 
 public static class EndpointsSetup
 {

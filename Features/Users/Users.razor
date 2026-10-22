@@ -2,8 +2,7 @@
 @attribute [Authorize]
 @rendermode InteractiveServer
 @using System.ComponentModel.DataAnnotations
-@using Microsoft.EntityFrameworkCore
-@inject IDbContextFactory<AppDbContext> DbFactory
+@inject UserAccountService UserAccountService
 
 <PageTitle>Utilisateurs</PageTitle>
 
@@ -194,8 +193,7 @@ else
 
     private async Task LoadUsers()
     {
-        await using var db = await DbFactory.CreateDbContextAsync();
-        users = await db.Users.OrderBy(u => u.Username).ToListAsync();
+        users = await UserAccountService.GetUsersAsync();
     }
 
     private async Task<bool> CurrentUserIsAdminAsync()
@@ -262,33 +260,15 @@ else
             return;
         }
 
-        await using var db = await DbFactory.CreateDbContextAsync();
-        var tracked = await db.Users.FindAsync(editingUser.Id);
-        if (tracked is null)
-        {
-            editingUser = null;
-            await LoadUsers();
-            return;
-        }
-
-        var normalizedUsername = UserService.NormalizeUsername(editFormModel.Username);
-        var usernameTaken = await db.Users.AnyAsync(u => u.Id != editingUser.Id && u.Username == normalizedUsername);
-        if (usernameTaken)
+        var result = await UserAccountService.UpdateUserAsync(
+            editingUser.Id, editFormModel.Username, editFormModel.Role, editFormModel.IsActive, editFormModel.Password);
+        if (result == UserSaveResult.UsernameTaken)
         {
             editError = "Ce nom d'utilisateur existe déjà.";
             return;
         }
 
-        tracked.Username = normalizedUsername;
-        tracked.Role = editFormModel.Role;
-        tracked.IsActive = editFormModel.IsActive;
-        if (!string.IsNullOrEmpty(editFormModel.Password))
-        {
-            tracked.PasswordHash = UserService.HashPassword(editFormModel.Password);
-        }
-
-        await db.SaveChangesAsync();
-
+        // Saved, or NotFound (deleted meanwhile): either way close the modal and refresh the list.
         editingUser = null;
         await LoadUsers();
     }
@@ -301,24 +281,12 @@ else
             return;
         }
 
-        await using var db = await DbFactory.CreateDbContextAsync();
-
-        var normalizedUsername = UserService.NormalizeUsername(addFormModel.Username);
-        var alreadyExists = await db.Users.AnyAsync(u => u.Username == normalizedUsername);
-        if (alreadyExists)
+        var result = await UserAccountService.CreateUserAsync(addFormModel.Username, addFormModel.Password, addFormModel.Role);
+        if (result == UserSaveResult.UsernameTaken)
         {
             addError = "Ce nom d'utilisateur existe déjà.";
             return;
         }
-
-        db.Users.Add(new User
-        {
-            Username = normalizedUsername,
-            PasswordHash = UserService.HashPassword(addFormModel.Password),
-            Role = addFormModel.Role,
-            CreatedAt = DateTime.UtcNow
-        });
-        await db.SaveChangesAsync();
 
         showAddModal = false;
         await LoadUsers();

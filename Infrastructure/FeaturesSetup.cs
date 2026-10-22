@@ -14,6 +14,7 @@ public static class FeaturesSetup
     {
         services.AddHttpClient<EmailService>();
         services.AddScoped<SundayClassService>();
+        services.AddScoped<UserAccountService>();
         return services;
     }
 

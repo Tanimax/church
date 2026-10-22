@@ -1,9 +1,8 @@
 @page "/admin/members"
 @attribute [Authorize]
 @rendermode InteractiveServer
-@inject IDbContextFactory<AppDbContext> DbFactory
+@inject MemberService MemberService
 @inject NavigationManager Nav
-@inject EmailService EmailService
 
 <PageTitle>Membres</PageTitle>
 
@@ -393,7 +392,7 @@ else
 
     private Member? viewingCardMember;
 
-    private string CardUrl(string token) => $"{Nav.BaseUri.TrimEnd('/')}/card/{token}";
+    private string CardUrl(string token) => MemberService.CardUrl(Nav.BaseUri, token);
 
     private string ExportUrl => $"/admin/members/export.csv?search={Uri.EscapeDataString(searchTerm)}&baptized={baptizedFilterValue}&active={activeFilterValue}";
 
@@ -470,8 +469,7 @@ else
 
     private async Task LoadMembers()
     {
-        await using var db = await DbFactory.CreateDbContextAsync();
-        members = await db.Members.OrderBy(m => m.LastName).ThenBy(m => m.FirstName).ToListAsync();
+        members = await MemberService.GetMembersAsync();
     }
 
     private async Task<bool> CanManageMembersAsync()
@@ -514,29 +512,8 @@ else
             return;
         }
 
-        await using var db = await DbFactory.CreateDbContextAsync();
-        var member = new Member
-        {
-            FirstName = addFormModel.FirstName.Trim(),
-            LastName = addFormModel.LastName.Trim(),
-            Phone = string.IsNullOrWhiteSpace(addFormModel.Phone) ? null : addFormModel.Phone.Trim(),
-            Email = string.IsNullOrWhiteSpace(addFormModel.Email) ? null : addFormModel.Email.Trim(),
-            Token = TokenService.GenerateToken(),
-            CreatedAt = DateTime.UtcNow,
-            IsBaptized = addFormModel.IsBaptized,
-            BirthDay = addFormModel.BirthDay,
-            BirthMonth = addFormModel.BirthMonth
-        };
-        db.Members.Add(member);
-        await db.SaveChangesAsync();
-
-        addCreatedMember = member;
-        addCardUrl = $"{Nav.BaseUri.TrimEnd('/')}/card/{member.Token}";
-
-        if (!string.IsNullOrWhiteSpace(member.Email))
-        {
-            await EmailService.SendWelcomeEmailAsync(member.Email, member.FullName, addCardUrl);
-        }
+        addCreatedMember = await MemberService.CreateMemberAsync(addFormModel, Nav.BaseUri);
+        addCardUrl = CardUrl(addCreatedMember.Token);
 
         await LoadMembers();
     }
@@ -582,24 +559,8 @@ else
             return;
         }
 
-        await using var db = await DbFactory.CreateDbContextAsync();
-        var tracked = await db.Members.FindAsync(editingMember.Id);
-        if (tracked is null)
-        {
-            editingMember = null;
-            await LoadMembers();
-            return;
-        }
-
-        tracked.FirstName = editFormModel.FirstName.Trim();
-        tracked.LastName = editFormModel.LastName.Trim();
-        tracked.Phone = string.IsNullOrWhiteSpace(editFormModel.Phone) ? null : editFormModel.Phone.Trim();
-        tracked.Email = string.IsNullOrWhiteSpace(editFormModel.Email) ? null : editFormModel.Email.Trim();
-        tracked.IsBaptized = editFormModel.IsBaptized;
-        tracked.BirthDay = editFormModel.BirthDay;
-        tracked.BirthMonth = editFormModel.BirthMonth;
-
-        await db.SaveChangesAsync();
+        // A member deleted meanwhile is simply dropped from the refreshed list.
+        await MemberService.UpdateMemberAsync(editingMember.Id, editFormModel);
 
         editingMember = null;
         await LoadMembers();
@@ -607,13 +568,9 @@ else
 
     private async Task ToggleActive(Member member)
     {
-        await using var db = await DbFactory.CreateDbContextAsync();
-        var tracked = await db.Members.FindAsync(member.Id);
-        if (tracked is not null)
+        if (await MemberService.ToggleActiveAsync(member.Id) is { } isActive)
         {
-            tracked.IsActive = !tracked.IsActive;
-            await db.SaveChangesAsync();
-            member.IsActive = tracked.IsActive;
+            member.IsActive = isActive;
         }
     }
 }

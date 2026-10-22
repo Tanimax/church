@@ -17,8 +17,7 @@ namespace ChurchAttendance.Tests.Infrastructure;
 // its own freshly created, migrated database on that container for isolation.
 public class CustomWebApplicationFactory : WebApplicationFactory<Program>
 {
-    private static readonly PostgreSqlContainer Container = new PostgreSqlBuilder()
-        .WithImage("postgres:17-alpine")
+    private static readonly PostgreSqlContainer Container = new PostgreSqlBuilder("postgres:17-alpine")
         .Build();
 
     private static readonly SemaphoreSlim StartLock = new(1, 1);

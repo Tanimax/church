@@ -124,8 +124,8 @@ else
 @code {
     private DateOnly selectedDate = GetMostRecentSunday();
 
-    private List<(string FullName, DateTime CheckedInAt)>? detailRows;
-    private List<(string FullName, string? Phone, DateOnly? LastAttendance)> absentMembers = new();
+    private List<SundayPresence>? detailRows;
+    private List<AbsentMember> absentMembers = new();
 
     private int presentPage = 1;
     private int presentPageSize = 10;
@@ -133,11 +133,11 @@ else
     private int absentPageSize = 10;
 
     private int presentTotalPages => Math.Max(1, (int)Math.Ceiling((detailRows?.Count ?? 0) / (double)presentPageSize));
-    private IEnumerable<(string FullName, DateTime CheckedInAt)> pagedPresentRows =>
+    private IEnumerable<SundayPresence> pagedPresentRows =>
         (detailRows ?? []).Skip((Math.Min(presentPage, presentTotalPages) - 1) * presentPageSize).Take(presentPageSize);
 
     private int absentTotalPages => Math.Max(1, (int)Math.Ceiling(absentMembers.Count / (double)absentPageSize));
-    private IEnumerable<(string FullName, string? Phone, DateOnly? LastAttendance)> pagedAbsentMembers =>
+    private IEnumerable<AbsentMember> pagedAbsentMembers =>
         absentMembers.Skip((Math.Min(absentPage, absentTotalPages) - 1) * absentPageSize).Take(absentPageSize);
 
     private void ResetPresentPage() => presentPage = 1;
@@ -153,46 +153,9 @@ else
     {
         await using var db = await DbFactory.CreateDbContextAsync();
 
-        var attendances = await db.Attendances
-            .Include(a => a.Member)
-            .Include(a => a.ServiceSession)
-            .Where(a => a.ServiceSession!.Date == selectedDate)
-            .ToListAsync();
-
-        // A member can have both a Culte and a Sainte Cène record for the same Sunday —
-        // for general attendance purposes that's a single presence, not two, so keep only
-        // the earliest (first arrival) record per member.
-        var dedupedAttendances = attendances
-            .GroupBy(a => a.MemberId)
-            .Select(g => g.OrderBy(a => a.CheckedInAt).First())
-            .OrderBy(a => a.Member!.FullName)
-            .ToList();
-
-        detailRows = dedupedAttendances
-            .Select(a => (a.Member!.FullName, a.CheckedInAt))
-            .ToList();
-
-        var presentMemberIds = dedupedAttendances.Select(a => a.MemberId).Distinct().ToHashSet();
-
-        var absentMembersRaw = await db.Members
-            .Where(m => m.IsActive && !presentMemberIds.Contains(m.Id))
-            .Select(m => new
-            {
-                m.FirstName,
-                m.LastName,
-                m.Phone,
-                LastAttendance = db.Attendances
-                    .Where(a => a.MemberId == m.Id)
-                    .OrderByDescending(a => a.ServiceSession!.Date)
-                    .Select(a => (DateOnly?)a.ServiceSession!.Date)
-                    .FirstOrDefault()
-            })
-            .ToListAsync();
-
-        absentMembers = absentMembersRaw
-            .Select(m => ($"{m.FirstName} {m.LastName}", m.Phone, m.LastAttendance))
-            .OrderBy(m => m.LastAttendance ?? DateOnly.MinValue)
-            .ToList();
+        detailRows = await AttendanceReportService.GetPresencesAsync(db, selectedDate, selectedDate);
+        absentMembers = await AttendanceReportService.GetAbsentMembersAsync(
+            db, detailRows.Select(p => p.MemberId).ToHashSet());
 
         ResetPresentPage();
         ResetAbsentPage();

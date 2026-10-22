@@ -1,6 +1,6 @@
 using ChurchAttendance.Models;
 
-namespace ChurchAttendance.Services;
+namespace ChurchAttendance.Features.Reports;
 
 public static class BirthdayReportService
 {

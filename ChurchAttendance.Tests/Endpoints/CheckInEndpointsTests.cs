@@ -1,8 +1,8 @@
 using System.Net.Http.Json;
 using ChurchAttendance.Data;
-using ChurchAttendance.Endpoints;
+using ChurchAttendance.Features.CheckIn;
+using ChurchAttendance.Features.Users;
 using ChurchAttendance.Models;
-using ChurchAttendance.Services;
 using ChurchAttendance.Tests.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 

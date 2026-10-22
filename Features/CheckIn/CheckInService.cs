@@ -2,7 +2,7 @@ using ChurchAttendance.Data;
 using ChurchAttendance.Models;
 using Microsoft.EntityFrameworkCore;
 
-namespace ChurchAttendance.Services;
+namespace ChurchAttendance.Features.CheckIn;
 
 public record CheckInResponse(string Status, string? FullName, DateTime? CheckedInAt);
 

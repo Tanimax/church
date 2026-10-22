@@ -1,6 +1,6 @@
 using QRCoder;
 
-namespace ChurchAttendance.Services;
+namespace ChurchAttendance.Common;
 
 public static class QrCodeService
 {

@@ -1,4 +1,4 @@
-using ChurchAttendance.Services;
+using ChurchAttendance.Features.Members;
 
 namespace ChurchAttendance.Tests.Services;
 

@@ -1,8 +1,6 @@
 using System.Text.Json.Serialization;
 using ChurchAttendance.Components;
-using ChurchAttendance.Endpoints;
 using ChurchAttendance.Infrastructure;
-using ChurchAttendance.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -21,7 +19,7 @@ builder.Services.AddAppAuthentication();
 var adminPassword = DatabaseSetup.ResolveSeedAdminPassword(builder.Configuration, builder.Environment);
 builder.Services.AddAppDatabase(builder.Configuration);
 
-builder.Services.AddHttpClient<EmailService>();
+builder.Services.AddAppFeatures();
 
 var app = builder.Build();
 

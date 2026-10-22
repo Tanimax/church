@@ -1,6 +1,6 @@
 using ChurchAttendance.Data;
+using ChurchAttendance.Features.CheckIn;
 using ChurchAttendance.Models;
-using ChurchAttendance.Services;
 using ChurchAttendance.Tests.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 

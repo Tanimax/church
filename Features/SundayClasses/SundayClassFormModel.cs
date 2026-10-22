@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace ChurchAttendance.Components.Pages.Admin;
+namespace ChurchAttendance.Features.SundayClasses;
 
 public class SundayClassFormModel
 {

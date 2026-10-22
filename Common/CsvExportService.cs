@@ -1,6 +1,6 @@
 using System.Text;
 
-namespace ChurchAttendance.Services;
+namespace ChurchAttendance.Common;
 
 public static class CsvExportService
 {

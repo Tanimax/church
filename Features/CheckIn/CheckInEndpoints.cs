@@ -1,9 +1,8 @@
 using ChurchAttendance.Data;
 using ChurchAttendance.Models;
-using ChurchAttendance.Services;
 using Microsoft.EntityFrameworkCore;
 
-namespace ChurchAttendance.Endpoints;
+namespace ChurchAttendance.Features.CheckIn;
 
 public record CheckInRequest(string Token, AttendanceType Type = AttendanceType.Culte);
 

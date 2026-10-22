@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace ChurchAttendance.Components.Pages.Admin;
+namespace ChurchAttendance.Features.Members;
 
 // Shared by the add and edit modals in Members.razor.
 public class MemberFormModel : IValidatableObject

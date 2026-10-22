@@ -1,7 +1,7 @@
 using ChurchAttendance.Models;
 using Microsoft.AspNetCore.Identity;
 
-namespace ChurchAttendance.Services;
+namespace ChurchAttendance.Features.Users;
 
 public static class UserService
 {

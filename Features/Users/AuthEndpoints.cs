@@ -1,12 +1,11 @@
 using System.Net;
 using System.Security.Claims;
 using ChurchAttendance.Data;
-using ChurchAttendance.Services;
-using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.EntityFrameworkCore;
 
-namespace ChurchAttendance.Endpoints;
+namespace ChurchAttendance.Features.Users;
 
 public static class AuthEndpoints
 {

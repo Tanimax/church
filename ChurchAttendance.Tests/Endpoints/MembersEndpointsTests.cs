@@ -1,8 +1,8 @@
 using System.IO.Compression;
-using System.Net;
 using System.Net.Http.Json;
+using System.Net;
 using ChurchAttendance.Data;
-using ChurchAttendance.Endpoints;
+using ChurchAttendance.Features.Members;
 using ChurchAttendance.Models;
 using ChurchAttendance.Tests.Infrastructure;
 using Microsoft.AspNetCore.Mvc.Testing;

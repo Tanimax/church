@@ -1,6 +1,6 @@
 using ChurchAttendance.Data;
+using ChurchAttendance.Features.Users;
 using ChurchAttendance.Models;
-using ChurchAttendance.Services;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
 

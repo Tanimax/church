@@ -1,5 +1,5 @@
 using System.ComponentModel.DataAnnotations;
-using ChurchAttendance.Components.Pages.Admin;
+using ChurchAttendance.Features.Members;
 
 namespace ChurchAttendance.Tests.Forms;
 

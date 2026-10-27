@@ -1,7 +1,7 @@
 using System.Net.Http.Json;
 using ChurchAttendance.Data;
 using ChurchAttendance.Features.CheckIn;
-using ChurchAttendance.Features.Users;
+using ChurchAttendance.Identity.Contracts;
 using ChurchAttendance.Models;
 using ChurchAttendance.Tests.Infrastructure;
 using Microsoft.EntityFrameworkCore;
@@ -192,20 +192,8 @@ public class CheckInEndpointsTests
         await using (var db = factory.CreateDbContext())
         {
             await SeedMemberAsync(db);
-            db.Users.Add(new User
-            {
-                Username = "secretaire1",
-                PasswordHash = UserService.HashPassword("secretaire-password"),
-                Role = UserRole.Secretaire,
-                CreatedAt = DateTime.UtcNow
-            });
-            db.Users.Add(new User
-            {
-                Username = "ecoledom1",
-                PasswordHash = UserService.HashPassword("ecoledom-password"),
-                Role = UserRole.EcoleDominicale,
-                CreatedAt = DateTime.UtcNow
-            });
+            await factory.SeedUserAsync("secretaire1", "secretaire-password", UserRole.Secretaire);
+            await factory.SeedUserAsync("ecoledom1", "ecoledom-password", UserRole.EcoleDominicale);
             await db.SaveChangesAsync();
         }
 

@@ -1,5 +1,5 @@
 using System.Net;
-using ChurchAttendance.Features.Users;
+using ChurchAttendance.Identity.Contracts;
 using ChurchAttendance.Models;
 using ChurchAttendance.Tests.Infrastructure;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -80,18 +80,7 @@ public class AuthEndpointsTests
     public async Task Login_InactiveUser_IsRejected()
     {
         using var factory = new CustomWebApplicationFactory();
-        await using (var db = factory.CreateDbContext())
-        {
-            db.Users.Add(new User
-            {
-                Username = "disabled",
-                PasswordHash = UserService.HashPassword("some-password"),
-                Role = UserRole.Secretaire,
-                IsActive = false,
-                CreatedAt = DateTime.UtcNow
-            });
-            await db.SaveChangesAsync();
-        }
+        await factory.SeedUserAsync("disabled", "some-password", UserRole.Secretaire, isActive: false);
         var client = factory.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
 
         using var loginForm = new FormUrlEncodedContent(new Dictionary<string, string>
@@ -109,17 +98,7 @@ public class AuthEndpointsTests
     public async Task Login_SecretaireRole_CanStillLogInAndReachAuthorizedPages()
     {
         using var factory = new CustomWebApplicationFactory();
-        await using (var db = factory.CreateDbContext())
-        {
-            db.Users.Add(new User
-            {
-                Username = "secretaire1",
-                PasswordHash = UserService.HashPassword("secretaire-password"),
-                Role = UserRole.Secretaire,
-                CreatedAt = DateTime.UtcNow
-            });
-            await db.SaveChangesAsync();
-        }
+        await factory.SeedUserAsync("secretaire1", "secretaire-password", UserRole.Secretaire);
 
         var client = await TestAuth.CreateAuthenticatedClientAsync(factory, "secretaire1", "secretaire-password");
 
@@ -199,7 +178,7 @@ public class AuthEndpointsTests
     public async Task BootstrapAdmin_IsSeededExactlyOnceOnFreshDatabase()
     {
         using var factory = new CustomWebApplicationFactory();
-        await using var db = factory.CreateDbContext();
+        await using var db = factory.CreateIdentityDbContext();
 
         var admins = db.Users.Where(u => u.Username == TestAuth.BootstrapAdminUsername).ToList();
 

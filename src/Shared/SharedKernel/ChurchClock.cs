@@ -1,4 +1,7 @@
-namespace ChurchAttendance.Common;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+
+namespace ChurchAttendance.SharedKernel;
 
 // The app runs on Fly.io, where the server clock is UTC, but every date the church cares about
 // ("today's service", "this year's Sainte Cène", a check-in time shown on screen) is a date or

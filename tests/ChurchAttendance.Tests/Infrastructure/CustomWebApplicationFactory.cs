@@ -1,4 +1,7 @@
 using ChurchAttendance.Data;
+using ChurchAttendance.Identity.Contracts;
+using ChurchAttendance.Identity.Core;
+using ChurchAttendance.Identity.Infrastructure;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
@@ -88,6 +91,10 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
             services.AddScoped<AppDbContext>(sp =>
                 sp.GetRequiredService<IDbContextFactory<AppDbContext>>().CreateDbContext());
 
+            // Module DbContexts (e.g. IdentityDbContext) read the connection string from here.
+            services.RemoveAll<DatabaseConnection>();
+            services.AddSingleton(new DatabaseConnection(_connectionString));
+
             if (_timeProvider is not null)
             {
                 services.RemoveAll<TimeProvider>();
@@ -98,6 +105,22 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
 
     public AppDbContext CreateDbContext() =>
         Services.GetRequiredService<IDbContextFactory<AppDbContext>>().CreateDbContext();
+
+    public IdentityDbContext CreateIdentityDbContext() =>
+        Services.GetRequiredService<IDbContextFactory<IdentityDbContext>>().CreateDbContext();
+
+    // Adds a login account directly, bypassing the Utilisateurs page.
+    public async Task SeedUserAsync(string username, string password, UserRole role, bool isActive = true)
+    {
+        await using var db = CreateIdentityDbContext();
+        var user = User.Create(username, PasswordHashing.HashPassword(password), role, DateTime.UtcNow);
+        if (!isActive)
+        {
+            user.Deactivate();
+        }
+        db.Users.Add(user);
+        await db.SaveChangesAsync();
+    }
 
     protected override void Dispose(bool disposing)
     {

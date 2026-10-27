@@ -1,5 +1,4 @@
 using System.Net;
-using ChurchAttendance.Common;
 using ChurchAttendance.Data;
 using ChurchAttendance.Models;
 using ChurchAttendance.Tests.Infrastructure;

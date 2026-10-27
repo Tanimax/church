@@ -1,4 +1,3 @@
-using ChurchAttendance.Common;
 using ChurchAttendance.Data;
 using ChurchAttendance.Models;
 using Microsoft.EntityFrameworkCore;

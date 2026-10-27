@@ -1,11 +1,12 @@
 using System.Net;
 using System.Security.Claims;
-using ChurchAttendance.Data;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication;
-using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Routing;
 
-namespace ChurchAttendance.Features.Users;
+namespace ChurchAttendance.Identity.Infrastructure;
 
 public static class AuthEndpoints
 {
@@ -19,15 +20,13 @@ public static class AuthEndpoints
             return Results.Text(BuildLoginHtml(hasError, isIdleLogout, returnUrl), "text/html");
         });
 
-        app.MapPost("/admin/login", async (HttpContext context, AppDbContext db) =>
+        app.MapPost("/admin/login", async (HttpContext context, UserAccountService accounts) =>
         {
             var form = await context.Request.ReadFormAsync();
-            var username = UserService.NormalizeUsername(form["username"].ToString());
-            var password = form["password"].ToString();
             var returnUrl = form["returnUrl"].ToString();
 
-            var user = await db.Users.FirstOrDefaultAsync(u => u.Username == username && u.IsActive);
-            if (user is null || !UserService.VerifyPassword(user.PasswordHash, password))
+            var user = await accounts.AuthenticateAsync(form["username"].ToString(), form["password"].ToString());
+            if (user is null)
             {
                 var retry = "/admin/login?error=1";
                 if (IsSafeLocalReturnUrl(returnUrl))

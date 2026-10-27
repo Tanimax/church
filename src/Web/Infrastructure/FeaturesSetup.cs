@@ -2,7 +2,6 @@ using ChurchAttendance.Features.CheckIn;
 using ChurchAttendance.Features.Members;
 using ChurchAttendance.Features.Reports;
 using ChurchAttendance.Features.SundayClasses;
-using ChurchAttendance.Features.Users;
 using ChurchAttendance.Features.Visitors;
 
 namespace ChurchAttendance.Infrastructure;
@@ -14,7 +13,6 @@ public static class FeaturesSetup
     {
         services.AddHttpClient<EmailService>();
         services.AddScoped<SundayClassService>();
-        services.AddScoped<UserAccountService>();
         services.AddScoped<MemberService>();
         return services;
     }
@@ -25,7 +23,6 @@ public static class FeaturesSetup
         app.MapCardEndpoints();
         app.MapCheckInEndpoints();
         app.MapReportsEndpoints();
-        app.MapAuthEndpoints();
         app.MapVisitorEndpoints();
 
         app.MapGet("/scanner", () => Results.Redirect("/scanner/index.html"));

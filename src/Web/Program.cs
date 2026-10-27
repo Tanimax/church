@@ -22,6 +22,7 @@ builder.Services.AddAppDatabase(builder.Configuration);
 
 builder.Services.AddChurchClock(builder.Configuration);
 builder.Services.AddAppFeatures();
+builder.Services.AddModules(builder.Configuration, ModulesSetup.All);
 
 var app = builder.Build();
 
@@ -47,9 +48,11 @@ app.UseScannerAuthGate();
 
 app.MapStaticAssets();
 app.MapRazorComponents<App>()
-    .AddInteractiveServerRenderMode();
+    .AddInteractiveServerRenderMode()
+    .AddAdditionalAssemblies(ModulesSetup.RazorAssemblies);
 
 app.MapAppEndpoints();
+app.MapModuleEndpoints(ModulesSetup.All);
 
 app.Run();
 

@@ -3,6 +3,9 @@ name: Deploy
 on:
   push:
     branches: [main]
+  # Tests (not deploys: both deploy jobs are main-only) also run on pull requests to main.
+  pull_request:
+    branches: [main]
   workflow_dispatch:
 
 jobs:
@@ -22,7 +25,19 @@ jobs:
         run: dotnet build ChurchAttendance.sln --no-restore
 
       - name: Test
-        run: dotnet test ChurchAttendance.Tests/ChurchAttendance.Tests.csproj --no-build
+        run: dotnet test tests/ChurchAttendance.Tests/ChurchAttendance.Tests.csproj --no-build
+
+      - name: Architecture tests
+        run: dotnet test tests/Architecture.Tests/Architecture.Tests.csproj --no-build
+
+      # Fly builds this same Dockerfile on deploy; building it here catches a broken image
+      # (e.g. a project path the Dockerfile doesn't know about) before it reaches staging.
+      - name: Build Docker image
+        run: docker build -t church-attendance:ci .
+
+      # ChurchClock resolves America/Toronto at startup and fails fast without tzdata.
+      - name: Check the image has time zone data
+        run: docker run --rm --entrypoint ls church-attendance:ci /usr/share/zoneinfo/America/Toronto
 
   deploy-staging:
     needs: test

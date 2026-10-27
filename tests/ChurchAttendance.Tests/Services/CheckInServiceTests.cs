@@ -1,4 +1,3 @@
-using ChurchAttendance.Common;
 using ChurchAttendance.Data;
 using ChurchAttendance.Features.CheckIn;
 using ChurchAttendance.Models;

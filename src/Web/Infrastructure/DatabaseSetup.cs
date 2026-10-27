@@ -1,6 +1,5 @@
 using ChurchAttendance.Data;
-using ChurchAttendance.Features.Users;
-using ChurchAttendance.Models;
+using ChurchAttendance.Identity.Contracts;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
 
@@ -12,6 +11,9 @@ public static class DatabaseSetup
     {
         var connectionString = BuildPostgresConnectionString(
             configuration, Environment.GetEnvironmentVariable("DATABASE_URL"));
+
+        // Read by each module's DbContext registration.
+        services.AddSingleton(new DatabaseConnection(connectionString));
 
         // IDbContextFactory is used by Blazor Server components, which run on a long-lived circuit
         // and must create a short-lived context per operation instead of sharing one scoped instance.
@@ -52,21 +54,14 @@ public static class DatabaseSetup
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         db.Database.Migrate();
 
-        // One-time bootstrap: the app used to gate the whole admin area behind a single
-        // shared ADMIN_PASSWORD. The first time this runs against a database with no user
-        // accounts yet, create an "admin" account with that same password so existing
-        // deployments keep working without any manual step.
-        if (!await db.Users.AnyAsync())
+        // Modules migrate after AppDbContext, whose migrations still create the tables they
+        // map, and in ModulesSetup order (services resolve in registration order).
+        foreach (var moduleDatabase in scope.ServiceProvider.GetServices<IModuleDatabase>())
         {
-            db.Users.Add(new User
-            {
-                Username = UserService.NormalizeUsername("admin"),
-                PasswordHash = UserService.HashPassword(adminPassword),
-                Role = UserRole.Admin,
-                CreatedAt = DateTime.UtcNow
-            });
-            await db.SaveChangesAsync();
+            await moduleDatabase.MigrateAsync();
         }
+
+        await scope.ServiceProvider.GetRequiredService<IAdminSeeder>().SeedAdminIfNoUsersAsync(adminPassword);
     }
 
     // Fly Postgres (managed or unmanaged) exposes DATABASE_URL as a libpq-style URI

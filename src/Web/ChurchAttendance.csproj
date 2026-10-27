@@ -21,7 +21,12 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Using Include="ChurchAttendance.SharedKernel" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\Shared\SharedKernel\SharedKernel.csproj" />
+    <ProjectReference Include="..\Modules\Identity\Identity.Infrastructure\Identity.Infrastructure.csproj" />
   </ItemGroup>
 
 </Project>

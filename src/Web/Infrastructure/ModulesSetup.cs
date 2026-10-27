@@ -1,15 +1,19 @@
 using System.Reflection;
+using ChurchAttendance.Identity.Infrastructure;
 using ChurchAttendance.SharedKernel;
 
 namespace ChurchAttendance.Infrastructure;
 
 // The modules the app is made of, in registration order. Listed by hand rather than found
-// by reflection so startup order stays visible and deterministic (each module will later
-// apply its own migrations, and Identity must run before Reporting). Empty until the first
-// feature is extracted out of Features/ into its own module.
+// by reflection so startup order stays visible and deterministic: each module applies its
+// own migrations in this order at startup, and Identity must run before Reporting. Features/ still holds
+// everything not yet extracted into a module.
 public static class ModulesSetup
 {
-    public static IReadOnlyList<IModule> All { get; } = [];
+    public static IReadOnlyList<IModule> All { get; } =
+    [
+        new IdentityModule(),
+    ];
 
     // Declared after All: static initializers run in textual order.
     public static Assembly[] RazorAssemblies { get; } = RazorAssembliesOf(All);

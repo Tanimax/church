@@ -1,6 +1,5 @@
-using ChurchAttendance.Data;
-using ChurchAttendance.Features.Users;
-using ChurchAttendance.Models;
+using ChurchAttendance.Identity.Contracts;
+using ChurchAttendance.Identity.Infrastructure;
 using ChurchAttendance.Tests.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -10,7 +9,7 @@ namespace ChurchAttendance.Tests.Services;
 public class UserAccountServiceTests
 {
     private static UserAccountService CreateService(CustomWebApplicationFactory factory) =>
-        new(factory.Services.GetRequiredService<IDbContextFactory<AppDbContext>>());
+        new(factory.Services.GetRequiredService<IDbContextFactory<IdentityDbContext>>());
 
     [Fact]
     public async Task CreateUserAsync_NormalizesUsernameAndHashesPassword()
@@ -23,7 +22,7 @@ public class UserAccountServiceTests
         Assert.Equal(UserSaveResult.Saved, result);
         var user = (await service.GetUsersAsync()).Single(u => u.Username == "marie.paul");
         Assert.Equal(UserRole.Secretaire, user.Role);
-        Assert.True(UserService.VerifyPassword(user.PasswordHash, "motdepasse123"));
+        Assert.True(PasswordHashing.VerifyPassword(user.PasswordHash, "motdepasse123"));
     }
 
     [Fact]
@@ -52,7 +51,7 @@ public class UserAccountServiceTests
         var updated = (await service.GetUsersAsync()).Single(u => u.Id == marie.Id);
         Assert.Equal(UserRole.EcoleDominicale, updated.Role);
         Assert.False(updated.IsActive);
-        Assert.True(UserService.VerifyPassword(updated.PasswordHash, "motdepasse123"));
+        Assert.True(PasswordHashing.VerifyPassword(updated.PasswordHash, "motdepasse123"));
     }
 
     [Fact]
@@ -78,5 +77,33 @@ public class UserAccountServiceTests
         var result = await service.UpdateUserAsync(999_999, "fantome", UserRole.Secretaire, isActive: true, newPassword: null);
 
         Assert.Equal(UserSaveResult.NotFound, result);
+    }
+
+    [Fact]
+    public async Task AuthenticateAsync_ReturnsActiveUserForCorrectCredentialsOnly()
+    {
+        using var factory = new CustomWebApplicationFactory();
+        var service = CreateService(factory);
+        await service.CreateUserAsync("marie", "motdepasse123", UserRole.Secretaire);
+        await factory.SeedUserAsync("paul", "motdepasse123", UserRole.Secretaire, isActive: false);
+
+        Assert.Equal("marie", (await service.AuthenticateAsync(" MARIE ", "motdepasse123"))?.Username);
+        Assert.Null(await service.AuthenticateAsync("marie", "mauvais"));
+        Assert.Null(await service.AuthenticateAsync("paul", "motdepasse123"));
+        Assert.Null(await service.AuthenticateAsync("inconnu", "motdepasse123"));
+    }
+
+    [Fact]
+    public async Task ChangePasswordAsync_RequiresTheCurrentPassword()
+    {
+        using var factory = new CustomWebApplicationFactory();
+        var service = CreateService(factory);
+        await service.CreateUserAsync("marie", "motdepasse123", UserRole.Secretaire);
+
+        Assert.False(await service.ChangePasswordAsync("marie", "mauvais", "nouveaupasse123"));
+        Assert.True(await service.ChangePasswordAsync("marie", "motdepasse123", "nouveaupasse123"));
+
+        Assert.Null(await service.AuthenticateAsync("marie", "motdepasse123"));
+        Assert.NotNull(await service.AuthenticateAsync("marie", "nouveaupasse123"));
     }
 }

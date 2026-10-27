@@ -1,4 +1,3 @@
-using ChurchAttendance.Common;
 
 namespace ChurchAttendance.Tests.Infrastructure;
 

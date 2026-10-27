@@ -1,9 +1,8 @@
-using ChurchAttendance.Models;
 using Microsoft.AspNetCore.Identity;
 
-namespace ChurchAttendance.Features.Users;
+namespace ChurchAttendance.Identity.Infrastructure;
 
-public static class UserService
+public static class PasswordHashing
 {
     // The hasher doesn't actually read anything off the TUser instance in the default
     // implementation — it's only there for extensibility — so a null user is safe here.
@@ -15,6 +14,4 @@ public static class UserService
     public static bool VerifyPassword(string passwordHash, string password) =>
         Hasher.VerifyHashedPassword(null!, passwordHash, password) is
             PasswordVerificationResult.Success or PasswordVerificationResult.SuccessRehashNeeded;
-
-    public static string NormalizeUsername(string username) => username.Trim().ToLowerInvariant();
 }

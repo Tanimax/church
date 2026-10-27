@@ -151,39 +151,6 @@ namespace ChurchAttendance.Migrations
                     b.ToTable("SundayClasses");
                 });
 
-            modelBuilder.Entity("ChurchAttendance.Models.User", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("boolean");
-
-                    b.Property<string>("PasswordHash")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<int>("Role")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("Username")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("Username")
-                        .IsUnique();
-
-                    b.ToTable("Users");
-                });
-
             modelBuilder.Entity("ChurchAttendance.Models.Visitor", b =>
                 {
                     b.Property<int>("Id")

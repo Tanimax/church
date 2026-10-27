@@ -1,14 +1,15 @@
+using ChurchAttendance.Common;
 using ChurchAttendance.Data;
 using ChurchAttendance.Models;
 using Microsoft.EntityFrameworkCore;
 
 namespace ChurchAttendance.Features.Members;
 
-// Member management for the Membres page. Uses IDbContextFactory because its callers
-// are Blazor Server components on long-lived circuits.
-public class MemberService(IDbContextFactory<AppDbContext> dbFactory, EmailService emailService)
+// Member management, shared by the Membres page and the /api/members endpoint so there is a
+// single way to create a member. Uses IDbContextFactory because some callers are Blazor Server
+// components on long-lived circuits.
+public class MemberService(IDbContextFactory<AppDbContext> dbFactory, EmailService emailService, ChurchClock clock)
 {
-    public static string CardUrl(string baseUri, string token) => $"{baseUri.TrimEnd('/')}/card/{token}";
 
     public async Task<List<Member>> GetMembersAsync()
     {
@@ -26,7 +27,7 @@ public class MemberService(IDbContextFactory<AppDbContext> dbFactory, EmailServi
             FirstName = form.FirstName.Trim(),
             LastName = form.LastName.Trim(),
             Token = TokenService.GenerateToken(),
-            CreatedAt = DateTime.UtcNow
+            CreatedAt = clock.UtcNow
         };
         ApplyDetails(member, form);
         db.Members.Add(member);
@@ -34,7 +35,7 @@ public class MemberService(IDbContextFactory<AppDbContext> dbFactory, EmailServi
 
         if (!string.IsNullOrWhiteSpace(member.Email))
         {
-            await emailService.SendWelcomeEmailAsync(member.Email, member.FullName, CardUrl(baseUri, member.Token));
+            await emailService.SendWelcomeEmailAsync(member.Email, member.FullName, PublicUrls.Card(baseUri, member.Token));
         }
 
         return member;

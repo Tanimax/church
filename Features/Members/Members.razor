@@ -392,7 +392,7 @@ else
 
     private Member? viewingCardMember;
 
-    private string CardUrl(string token) => MemberService.CardUrl(Nav.BaseUri, token);
+    private string CardUrl(string token) => PublicUrls.Card(Nav.BaseUri, token);
 
     private string ExportUrl => $"/admin/members/export.csv?search={Uri.EscapeDataString(searchTerm)}&baptized={baptizedFilterValue}&active={activeFilterValue}";
 

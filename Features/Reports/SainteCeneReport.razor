@@ -2,6 +2,7 @@
 @attribute [Authorize]
 @rendermode InteractiveServer
 @inject IDbContextFactory<AppDbContext> DbFactory
+@inject ChurchClock Clock
 
 <PageTitle>Rapport Sainte Cène</PageTitle>
 
@@ -96,7 +97,7 @@ else
     private static readonly string[] MonthLabels =
         { "Jan", "Fév", "Mar", "Avr", "Mai", "Juin", "Juil", "Août", "Sep", "Oct", "Nov", "Déc" };
 
-    private int selectedYear = DateTime.Today.Year;
+    private int selectedYear;
     private string searchTerm = "";
     private List<int> availableYears = new();
     private List<MemberRow>? rows;
@@ -121,7 +122,8 @@ else
 
     protected override async Task OnInitializedAsync()
     {
-        var currentYear = DateTime.Today.Year;
+        var currentYear = Clock.Today.Year;
+        selectedYear = currentYear;
         availableYears = Enumerable.Range(currentYear - 3, 4).Reverse().ToList();
 
         await LoadReport();

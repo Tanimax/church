@@ -1,3 +1,4 @@
+using ChurchAttendance.Common;
 using ChurchAttendance.Data;
 using ChurchAttendance.Models;
 using Microsoft.EntityFrameworkCore;
@@ -8,14 +9,15 @@ public record CheckInResponse(string Status, string? FullName, DateTime? Checked
 
 public static class CheckInService
 {
-    public static async Task<CheckInResponse> CheckInMemberAsync(AppDbContext db, Member member, AttendanceType type)
+    public static async Task<CheckInResponse> CheckInMemberAsync(AppDbContext db, ChurchClock clock, Member member, AttendanceType type)
     {
         if (type == AttendanceType.SainteCene && !member.IsBaptized)
         {
             return new CheckInResponse("not_baptized", member.FullName, null);
         }
 
-        var today = DateOnly.FromDateTime(DateTime.Now);
+        // The church's local date, not the server's (UTC on Fly).
+        var today = clock.Today;
         var session = await db.ServiceSessions.FirstOrDefaultAsync(s => s.Date == today);
         if (session is null)
         {
@@ -24,7 +26,7 @@ public static class CheckInService
             await db.SaveChangesAsync();
         }
 
-        var response = await RecordAttendance(db, member, session, type);
+        var response = await RecordAttendance(db, clock, member, session, type);
 
         // Being present at Sainte Cène implies being present at the regular service
         // that day — auto-record a Culte attendance too, unless one already exists.
@@ -34,7 +36,7 @@ public static class CheckInService
                 a.MemberId == member.Id && a.ServiceSessionId == session.Id && a.Type == AttendanceType.Culte);
             if (!hasCulte)
             {
-                await RecordAttendance(db, member, session, AttendanceType.Culte, "Auto (Sainte Cène)");
+                await RecordAttendance(db, clock, member, session, AttendanceType.Culte, "Auto (Sainte Cène)");
             }
         }
 
@@ -42,7 +44,7 @@ public static class CheckInService
     }
 
     private static async Task<CheckInResponse> RecordAttendance(
-        AppDbContext db, Member member, ServiceSession session, AttendanceType type, string? checkedInBy = null)
+        AppDbContext db, ChurchClock clock, Member member, ServiceSession session, AttendanceType type, string? checkedInBy = null)
     {
         var existing = await db.Attendances
             .FirstOrDefaultAsync(a => a.MemberId == member.Id && a.ServiceSessionId == session.Id && a.Type == type);
@@ -56,7 +58,7 @@ public static class CheckInService
         {
             MemberId = member.Id,
             ServiceSessionId = session.Id,
-            CheckedInAt = DateTime.UtcNow,
+            CheckedInAt = clock.UtcNow,
             Type = type,
             CheckedInBy = checkedInBy
         };

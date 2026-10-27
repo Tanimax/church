@@ -2,6 +2,7 @@
 @attribute [Authorize]
 @rendermode InteractiveServer
 @inject IDbContextFactory<AppDbContext> DbFactory
+@inject ChurchClock Clock
 @inject NavigationManager Nav
 
 <PageTitle>Rapport Visiteurs</PageTitle>
@@ -52,7 +53,7 @@ else
                     <td>@v.FullName</td>
                     <td>@v.Phone</td>
                     <td>@v.Email</td>
-                    <td>@v.CreatedAt.ToLocalTime().ToString("HH:mm")</td>
+                    <td>@Clock.ToLocal(v.CreatedAt).ToString("HH:mm")</td>
                 </tr>
             }
         </tbody>
@@ -60,12 +61,16 @@ else
 }
 
 @code {
-    private DateOnly selectedDate = DateOnly.FromDateTime(DateTime.Today);
+    private DateOnly selectedDate;
     private List<Visitor>? visitors;
 
-    private string VisitorFormUrl => $"{Nav.BaseUri.TrimEnd('/')}/visitor";
+    private string VisitorFormUrl => PublicUrls.VisitorForm(Nav.BaseUri);
 
-    protected override async Task OnInitializedAsync() => await LoadReport();
+    protected override async Task OnInitializedAsync()
+    {
+        selectedDate = Clock.Today;
+        await LoadReport();
+    }
 
     private async Task LoadReport()
     {

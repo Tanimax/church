@@ -3,6 +3,7 @@
 @attribute [Authorize]
 @rendermode InteractiveServer
 @inject IDbContextFactory<AppDbContext> DbFactory
+@inject ChurchClock Clock
 
 <PageTitle>Sainte Cène — Enregistrement manuel</PageTitle>
 
@@ -57,7 +58,7 @@
                             }
                             else if (sainteCeneToday.TryGetValue(member.Id, out var time))
                             {
-                                <span class="sc-status sc-status-good">✓ Enregistré à @time.ToLocalTime().ToString("HH:mm")</span>
+                                <span class="sc-status sc-status-good">✓ Enregistré à @Clock.ToLocal(time).ToString("HH:mm")</span>
                             }
                             else
                             {
@@ -117,7 +118,7 @@
         await using var db = await DbFactory.CreateDbContextAsync();
         activeMembers = await db.Members.Where(m => m.IsActive).ToListAsync();
 
-        var today = DateOnly.FromDateTime(DateTime.Now);
+        var today = Clock.Today;
         var todaySessionId = await db.ServiceSessions
             .Where(s => s.Date == today)
             .Select(s => s.Id)
@@ -164,7 +165,7 @@
                 return;
             }
 
-            var response = await CheckInService.CheckInMemberAsync(db, tracked, AttendanceType.SainteCene);
+            var response = await CheckInService.CheckInMemberAsync(db, Clock, tracked, AttendanceType.SainteCene);
 
             if (response.CheckedInAt.HasValue)
             {

@@ -43,6 +43,31 @@ public class MembersEndpointsTests
     }
 
     [Fact]
+    public async Task CreateMember_InvalidPhone_ReturnsBadRequest_SameRulesAsMembresPage()
+    {
+        using var factory = new CustomWebApplicationFactory();
+        var client = factory.CreateClient();
+
+        var response = await client.PostAsJsonAsync("/api/members/", new CreateMemberRequest("Jean", "Dupont", "pas-un-numéro"));
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task CreateMember_TrimsNamesAndStoresBlankPhoneAsNull()
+    {
+        using var factory = new CustomWebApplicationFactory();
+        var client = factory.CreateClient();
+
+        var response = await client.PostAsJsonAsync("/api/members/", new CreateMemberRequest("  Jean ", " Dupont ", "   "));
+        var body = await response.Content.ReadFromJsonAsync<MemberResponse>();
+
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        Assert.Equal("Jean Dupont", body!.FullName);
+        Assert.Null(body.Phone);
+    }
+
+    [Fact]
     public async Task GetQrPng_ValidToken_ReturnsPngImage()
     {
         using var factory = new CustomWebApplicationFactory();

@@ -255,4 +255,23 @@ public class CheckInEndpointsTests
         var culteCount = await verifyDb.Attendances.CountAsync(a => a.Type == AttendanceType.Culte);
         Assert.Equal(1, culteCount);
     }
+
+    [Fact]
+    public async Task CheckIn_SaturdayEveningInMontreal_CreatesSaturdaySessionNotUtcSunday()
+    {
+        using var factory = new CustomWebApplicationFactory(new FixedTimeProvider(FixedTimeProvider.SaturdayEveningInMontreal));
+        await using (var db = factory.CreateDbContext())
+        {
+            await SeedMemberAsync(db);
+        }
+        var client = factory.CreateClient();
+
+        var response = await client.PostAsJsonAsync("/api/checkin", new CheckInRequest("member-token"));
+        var body = await response.Content.ReadFromJsonAsync<CheckInResponse>();
+
+        Assert.Equal("ok", body!.Status);
+        await using var verifyDb = factory.CreateDbContext();
+        var session = await verifyDb.ServiceSessions.SingleAsync();
+        Assert.Equal(new DateOnly(2026, 10, 24), session.Date);
+    }
 }

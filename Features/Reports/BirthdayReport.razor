@@ -2,6 +2,7 @@
 @attribute [Authorize]
 @rendermode InteractiveServer
 @inject IDbContextFactory<AppDbContext> DbFactory
+@inject ChurchClock Clock
 
 <PageTitle>Rapport d'anniversaires</PageTitle>
 
@@ -53,7 +54,7 @@ else
     private static readonly string[] MonthNames =
         { "", "janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre", "décembre" };
 
-    private DateOnly selectedSunday = GetMostRecentSunday();
+    private DateOnly selectedSunday;
     private List<(DateOnly Date, Member Member)>? matches;
 
     // "La semaine incluant le dimanche du rapport" means the week leading up to and
@@ -61,7 +62,11 @@ else
     private DateOnly WeekStart => selectedSunday.AddDays(-6);
     private DateOnly WeekEnd => selectedSunday;
 
-    protected override async Task OnInitializedAsync() => await LoadReport();
+    protected override async Task OnInitializedAsync()
+    {
+        selectedSunday = Clock.MostRecentSunday;
+        await LoadReport();
+    }
 
     private async Task LoadReport()
     {
@@ -72,11 +77,5 @@ else
             .ToListAsync();
 
         matches = BirthdayReportService.FindBirthdaysInWeek(membersWithBirthday, WeekStart);
-    }
-
-    private static DateOnly GetMostRecentSunday()
-    {
-        var today = DateOnly.FromDateTime(DateTime.Today);
-        return today.AddDays(-(int)today.DayOfWeek);
     }
 }

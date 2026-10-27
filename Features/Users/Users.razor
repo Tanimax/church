@@ -3,6 +3,7 @@
 @rendermode InteractiveServer
 @using System.ComponentModel.DataAnnotations
 @inject UserAccountService UserAccountService
+@inject ChurchClock Clock
 
 <PageTitle>Utilisateurs</PageTitle>
 
@@ -159,7 +160,7 @@ else
                                 <span class="badge bg-secondary">Inactif</span>
                             }
                         </td>
-                        <td>@user.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy")</td>
+                        <td>@Clock.ToLocal(user.CreatedAt).ToString("dd/MM/yyyy")</td>
                         <AuthorizeView Roles="Admin" Context="rowAuthContext">
                             <Authorized>
                                 <td>

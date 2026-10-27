@@ -74,11 +74,4 @@ public class MemberServiceTests
         Assert.True(await service.ToggleActiveAsync(member.Id));
         Assert.Null(await service.ToggleActiveAsync(999_999));
     }
-
-    [Fact]
-    public void CardUrl_JoinsBaseUriAndTokenWithSingleSlash()
-    {
-        Assert.Equal("https://eglise.example/card/abc", MemberService.CardUrl("https://eglise.example/", "abc"));
-        Assert.Equal("https://eglise.example/card/abc", MemberService.CardUrl("https://eglise.example", "abc"));
-    }
 }

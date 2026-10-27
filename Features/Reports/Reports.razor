@@ -2,6 +2,7 @@
 @attribute [Authorize]
 @rendermode InteractiveServer
 @inject IDbContextFactory<AppDbContext> DbFactory
+@inject ChurchClock Clock
 
 <PageTitle>Rapport Dominical</PageTitle>
 
@@ -40,7 +41,7 @@ else
                     {
                         <tr>
                             <td>@row.FullName</td>
-                            <td>@row.CheckedInAt.ToLocalTime().ToString("HH:mm")</td>
+                            <td>@Clock.ToLocal(row.CheckedInAt).ToString("HH:mm")</td>
                         </tr>
                     }
                 </tbody>
@@ -122,7 +123,7 @@ else
 }
 
 @code {
-    private DateOnly selectedDate = GetMostRecentSunday();
+    private DateOnly selectedDate;
 
     private List<SundayPresence>? detailRows;
     private List<AbsentMember> absentMembers = new();
@@ -147,7 +148,11 @@ else
 
     private string ExportUrl => $"/admin/reports/export.csv?start={selectedDate:yyyy-MM-dd}&end={selectedDate:yyyy-MM-dd}";
 
-    protected override async Task OnInitializedAsync() => await LoadReport();
+    protected override async Task OnInitializedAsync()
+    {
+        selectedDate = Clock.MostRecentSunday;
+        await LoadReport();
+    }
 
     private async Task LoadReport()
     {
@@ -159,11 +164,5 @@ else
 
         ResetPresentPage();
         ResetAbsentPage();
-    }
-
-    private static DateOnly GetMostRecentSunday()
-    {
-        var today = DateOnly.FromDateTime(DateTime.Today);
-        return today.AddDays(-(int)today.DayOfWeek);
     }
 }

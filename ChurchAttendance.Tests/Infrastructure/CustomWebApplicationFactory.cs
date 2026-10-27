@@ -25,6 +25,7 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
 
     private readonly string _databaseName = $"test_{Guid.NewGuid():N}";
     private readonly string _connectionString;
+    private readonly TimeProvider? _timeProvider;
 
     private static void EnsureContainerStarted()
     {
@@ -48,8 +49,14 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
         }
     }
 
-    public CustomWebApplicationFactory()
+    public CustomWebApplicationFactory() : this(timeProvider: null)
     {
+    }
+
+    // Pass a FixedTimeProvider to freeze the app's clock (ChurchClock reads TimeProvider).
+    public CustomWebApplicationFactory(TimeProvider? timeProvider)
+    {
+        _timeProvider = timeProvider;
         EnsureContainerStarted();
 
         var adminConnectionString = Container.GetConnectionString();
@@ -80,6 +87,12 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
             services.AddDbContextFactory<AppDbContext>(options => options.UseNpgsql(_connectionString));
             services.AddScoped<AppDbContext>(sp =>
                 sp.GetRequiredService<IDbContextFactory<AppDbContext>>().CreateDbContext());
+
+            if (_timeProvider is not null)
+            {
+                services.RemoveAll<TimeProvider>();
+                services.AddSingleton(_timeProvider);
+            }
         });
     }
 

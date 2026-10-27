@@ -1,8 +1,10 @@
 using System.Net;
+using ChurchAttendance.Common;
 using ChurchAttendance.Data;
 using ChurchAttendance.Models;
 using ChurchAttendance.Tests.Infrastructure;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace ChurchAttendance.Tests.Endpoints;
 
@@ -38,7 +40,8 @@ public class ReportsEndpointsTests
     public async Task ExportCsv_MemberWithCulteAndSainteCeneSameSession_CollapsesToSingleRowUsingEarliestCheckIn()
     {
         using var factory = new CustomWebApplicationFactory();
-        var today = DateOnly.FromDateTime(DateTime.Today);
+        var clock = factory.Services.GetRequiredService<ChurchClock>();
+        var today = clock.Today;
 
         await using (var db = factory.CreateDbContext())
         {
@@ -48,7 +51,8 @@ public class ReportsEndpointsTests
             db.ServiceSessions.Add(session);
             await db.SaveChangesAsync();
 
-            var earliest = new DateTime(today.Year, today.Month, today.Day, 9, 0, 0, DateTimeKind.Utc);
+            // 09:00 church-local time, stored as UTC like real check-ins; the export must show 09:00.
+            var earliest = clock.ToUtc(today.ToDateTime(new TimeOnly(9, 0)));
             db.Attendances.AddRange(
                 new Attendance { MemberId = member.Id, ServiceSessionId = session.Id, Type = AttendanceType.Culte, CheckedInAt = earliest },
                 new Attendance { MemberId = member.Id, ServiceSessionId = session.Id, Type = AttendanceType.SainteCene, CheckedInAt = earliest.AddMinutes(5) });

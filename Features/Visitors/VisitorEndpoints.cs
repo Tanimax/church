@@ -15,7 +15,7 @@ public static class VisitorEndpoints
             return Results.Text(BuildVisitorFormHtml(status), "text/html");
         });
 
-        app.MapPost("/api/visitors", async (HttpContext context, AppDbContext db) =>
+        app.MapPost("/api/visitors", async (HttpContext context, AppDbContext db, ChurchClock clock) =>
         {
             var form = await context.Request.ReadFormAsync();
             var fullName = form["fullName"].ToString().Trim();
@@ -32,8 +32,8 @@ public static class VisitorEndpoints
                 FullName = fullName,
                 Phone = phone,
                 Email = string.IsNullOrWhiteSpace(email) ? null : email,
-                VisitDate = DateOnly.FromDateTime(DateTime.Now),
-                CreatedAt = DateTime.UtcNow
+                VisitDate = clock.Today,
+                CreatedAt = clock.UtcNow
             };
             db.Visitors.Add(visitor);
             await db.SaveChangesAsync();
@@ -43,8 +43,7 @@ public static class VisitorEndpoints
 
         app.MapGet("/visitor/qr.png", (HttpRequest request) =>
         {
-            var baseUrl = $"{request.Scheme}://{request.Host}";
-            var png = QrCodeService.GeneratePng($"{baseUrl}/visitor");
+            var png = QrCodeService.GeneratePng(PublicUrls.VisitorForm(request));
             return Results.File(png, "image/png");
         });
     }

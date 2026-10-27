@@ -1,6 +1,7 @@
 @page "/"
 @attribute [Authorize]
 @inject IDbContextFactory<AppDbContext> DbFactory
+@inject ChurchClock Clock
 @using ChurchAttendance.Components.Shared
 
 <PageTitle>Tableau de bord</PageTitle>
@@ -22,7 +23,7 @@
                               Data="sundayTrend" SeriesName="Présents" XAxisLabel="Dimanche"
                               SeriesColor="var(--series-1)" />
 
-            <SimpleBarChart Title="@($"Sainte Cène par mois ({DateTime.Today.Year})")"
+            <SimpleBarChart Title="@($"Sainte Cène par mois ({Clock.Today.Year})")"
                              Data="sainteCeneTrend" SeriesName="Présents" XAxisLabel="Mois"
                              SeriesColor="var(--series-2)" />
 
@@ -61,8 +62,8 @@ else
     {
         await using var db = await DbFactory.CreateDbContextAsync();
 
-        var today = DateOnly.FromDateTime(DateTime.Today);
-        var lastSunday = today.AddDays(-(int)today.DayOfWeek);
+        var today = Clock.Today;
+        var lastSunday = Clock.MostRecentSunday;
 
         // --- Sunday attendance trend (last 10 Sundays) ---
         var sundays = Enumerable.Range(0, 10).Select(i => lastSunday.AddDays(-7 * (9 - i))).ToList();
@@ -107,7 +108,7 @@ else
         sainteCeneThisMonth = sceneByMonth.GetValueOrDefault(today.Month, 0);
 
         // --- Visitors by month, last 6 months ---
-        var sixMonthsAgo = DateOnly.FromDateTime(DateTime.Today.AddMonths(-5));
+        var sixMonthsAgo = today.AddMonths(-5);
         var rangeStart = new DateOnly(sixMonthsAgo.Year, sixMonthsAgo.Month, 1);
 
         var visitors = await db.Visitors
@@ -119,11 +120,12 @@ else
             .ToDictionary(g => g.Key, g => g.Count());
 
         visitorTrend = Enumerable.Range(0, 6)
-            .Select(i => DateOnly.FromDateTime(DateTime.Today.AddMonths(-(5 - i))))
+            .Select(i => today.AddMonths(-(5 - i)))
             .Select(d => new ChartPoint($"{MonthLabels[d.Month - 1]} {d.Year % 100:D2}", visitorsByYearMonth.GetValueOrDefault((d.Year, d.Month), 0)))
             .ToList();
 
-        visitorsLast30Days = await db.Visitors.CountAsync(v => v.VisitDate >= DateOnly.FromDateTime(DateTime.Today.AddDays(-30)));
+        var thirtyDaysAgo = today.AddDays(-30);
+        visitorsLast30Days = await db.Visitors.CountAsync(v => v.VisitDate >= thirtyDaysAgo);
 
         // --- Present / absent, last Sunday ---
         var presentIds = await db.Attendances

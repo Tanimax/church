@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using ChurchAttendance.Common;
 using ChurchAttendance.Components;
 using ChurchAttendance.Infrastructure;
 
@@ -19,6 +20,7 @@ builder.Services.AddAppAuthentication();
 var adminPassword = DatabaseSetup.ResolveSeedAdminPassword(builder.Configuration, builder.Environment);
 builder.Services.AddAppDatabase(builder.Configuration);
 
+builder.Services.AddChurchClock(builder.Configuration);
 builder.Services.AddAppFeatures();
 
 var app = builder.Build();

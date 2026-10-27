@@ -1,3 +1,4 @@
+using ChurchAttendance.Common;
 using ChurchAttendance.Data;
 using ChurchAttendance.Features.CheckIn;
 using ChurchAttendance.Models;
@@ -8,6 +9,8 @@ namespace ChurchAttendance.Tests.Services;
 
 public class CheckInServiceTests
 {
+    private static readonly ChurchClock Clock = FixedTimeProvider.ChurchClockAt(FixedTimeProvider.SaturdayEveningInMontreal);
+
     private static async Task<Member> SeedMemberAsync(AppDbContext db, bool isBaptized = true)
     {
         var member = new Member
@@ -31,7 +34,7 @@ public class CheckInServiceTests
         await using var db = factory.CreateDbContext();
         var member = await SeedMemberAsync(db, isBaptized: false);
 
-        var response = await CheckInService.CheckInMemberAsync(db, member, AttendanceType.SainteCene);
+        var response = await CheckInService.CheckInMemberAsync(db, Clock, member, AttendanceType.SainteCene);
 
         Assert.Equal("not_baptized", response.Status);
         Assert.Equal("Jean Dupont", response.FullName);
@@ -46,7 +49,7 @@ public class CheckInServiceTests
         await using var db = factory.CreateDbContext();
         var member = await SeedMemberAsync(db);
 
-        var response = await CheckInService.CheckInMemberAsync(db, member, AttendanceType.SainteCene);
+        var response = await CheckInService.CheckInMemberAsync(db, Clock, member, AttendanceType.SainteCene);
 
         Assert.Equal("ok", response.Status);
         Assert.NotNull(response.CheckedInAt);
@@ -64,8 +67,8 @@ public class CheckInServiceTests
         await using var db = factory.CreateDbContext();
         var member = await SeedMemberAsync(db);
 
-        var first = await CheckInService.CheckInMemberAsync(db, member, AttendanceType.SainteCene);
-        var second = await CheckInService.CheckInMemberAsync(db, member, AttendanceType.SainteCene);
+        var first = await CheckInService.CheckInMemberAsync(db, Clock, member, AttendanceType.SainteCene);
+        var second = await CheckInService.CheckInMemberAsync(db, Clock, member, AttendanceType.SainteCene);
 
         Assert.Equal("ok", first.Status);
         Assert.Equal("duplicate", second.Status);
@@ -73,5 +76,20 @@ public class CheckInServiceTests
 
         var sainteCeneCount = await db.Attendances.CountAsync(a => a.Type == AttendanceType.SainteCene);
         Assert.Equal(1, sainteCeneCount);
+    }
+
+    [Fact]
+    public async Task CheckInMemberAsync_SaturdayEveningInMontreal_FilesUnderSaturdayNotUtcSunday()
+    {
+        using var factory = new CustomWebApplicationFactory();
+        await using var db = factory.CreateDbContext();
+        var member = await SeedMemberAsync(db);
+
+        var response = await CheckInService.CheckInMemberAsync(db, Clock, member, AttendanceType.Culte);
+
+        Assert.Equal("ok", response.Status);
+        var session = await db.ServiceSessions.SingleAsync();
+        Assert.Equal(new DateOnly(2026, 10, 24), session.Date);
+        Assert.Equal((DateTime?)FixedTimeProvider.SaturdayEveningInMontreal.UtcDateTime, response.CheckedInAt);
     }
 }

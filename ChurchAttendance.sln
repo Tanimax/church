@@ -3,11 +3,15 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.5.2.0
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ChurchAttendance", "ChurchAttendance.csproj", "{602D4209-10D0-1345-44EE-76BAD739DAF4}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ChurchAttendance", "src\Web\ChurchAttendance.csproj", "{602D4209-10D0-1345-44EE-76BAD739DAF4}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ChurchAttendance.Tests", "ChurchAttendance.Tests\ChurchAttendance.Tests.csproj", "{A9D0164F-DD46-4A33-A5E1-197001A85DC7}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ChurchAttendance.Tests", "tests\ChurchAttendance.Tests\ChurchAttendance.Tests.csproj", "{A9D0164F-DD46-4A33-A5E1-197001A85DC7}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ChurchAttendance.E2ETests", "ChurchAttendance.E2ETests\ChurchAttendance.E2ETests.csproj", "{F63A9B09-7231-41C4-8BB6-6D7AED6BD8AC}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ChurchAttendance.E2ETests", "tests\ChurchAttendance.E2ETests\ChurchAttendance.E2ETests.csproj", "{F63A9B09-7231-41C4-8BB6-6D7AED6BD8AC}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SharedKernel", "src\Shared\SharedKernel\SharedKernel.csproj", "{3B6E2C1D-8F4A-4E57-9C2B-5A1D7E0F4C21}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Architecture.Tests", "tests\Architecture.Tests\Architecture.Tests.csproj", "{9D2F5A7B-1C3E-4B68-8E0A-6F4B2D9C1E37}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -55,6 +59,30 @@ Global
 		{F63A9B09-7231-41C4-8BB6-6D7AED6BD8AC}.Release|x64.Build.0 = Release|Any CPU
 		{F63A9B09-7231-41C4-8BB6-6D7AED6BD8AC}.Release|x86.ActiveCfg = Release|Any CPU
 		{F63A9B09-7231-41C4-8BB6-6D7AED6BD8AC}.Release|x86.Build.0 = Release|Any CPU
+		{3B6E2C1D-8F4A-4E57-9C2B-5A1D7E0F4C21}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3B6E2C1D-8F4A-4E57-9C2B-5A1D7E0F4C21}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3B6E2C1D-8F4A-4E57-9C2B-5A1D7E0F4C21}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{3B6E2C1D-8F4A-4E57-9C2B-5A1D7E0F4C21}.Debug|x64.Build.0 = Debug|Any CPU
+		{3B6E2C1D-8F4A-4E57-9C2B-5A1D7E0F4C21}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{3B6E2C1D-8F4A-4E57-9C2B-5A1D7E0F4C21}.Debug|x86.Build.0 = Debug|Any CPU
+		{3B6E2C1D-8F4A-4E57-9C2B-5A1D7E0F4C21}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3B6E2C1D-8F4A-4E57-9C2B-5A1D7E0F4C21}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3B6E2C1D-8F4A-4E57-9C2B-5A1D7E0F4C21}.Release|x64.ActiveCfg = Release|Any CPU
+		{3B6E2C1D-8F4A-4E57-9C2B-5A1D7E0F4C21}.Release|x64.Build.0 = Release|Any CPU
+		{3B6E2C1D-8F4A-4E57-9C2B-5A1D7E0F4C21}.Release|x86.ActiveCfg = Release|Any CPU
+		{3B6E2C1D-8F4A-4E57-9C2B-5A1D7E0F4C21}.Release|x86.Build.0 = Release|Any CPU
+		{9D2F5A7B-1C3E-4B68-8E0A-6F4B2D9C1E37}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9D2F5A7B-1C3E-4B68-8E0A-6F4B2D9C1E37}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9D2F5A7B-1C3E-4B68-8E0A-6F4B2D9C1E37}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{9D2F5A7B-1C3E-4B68-8E0A-6F4B2D9C1E37}.Debug|x64.Build.0 = Debug|Any CPU
+		{9D2F5A7B-1C3E-4B68-8E0A-6F4B2D9C1E37}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{9D2F5A7B-1C3E-4B68-8E0A-6F4B2D9C1E37}.Debug|x86.Build.0 = Debug|Any CPU
+		{9D2F5A7B-1C3E-4B68-8E0A-6F4B2D9C1E37}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9D2F5A7B-1C3E-4B68-8E0A-6F4B2D9C1E37}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9D2F5A7B-1C3E-4B68-8E0A-6F4B2D9C1E37}.Release|x64.ActiveCfg = Release|Any CPU
+		{9D2F5A7B-1C3E-4B68-8E0A-6F4B2D9C1E37}.Release|x64.Build.0 = Release|Any CPU
+		{9D2F5A7B-1C3E-4B68-8E0A-6F4B2D9C1E37}.Release|x86.ActiveCfg = Release|Any CPU
+		{9D2F5A7B-1C3E-4B68-8E0A-6F4B2D9C1E37}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

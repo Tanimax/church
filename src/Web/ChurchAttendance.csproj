@@ -8,15 +8,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Remove="ChurchAttendance.Tests/**/*.cs" />
-    <Content Remove="ChurchAttendance.Tests/**/*" />
-    <None Remove="ChurchAttendance.Tests/**/*" />
-    <Compile Remove="ChurchAttendance.E2ETests/**/*.cs" />
-    <Content Remove="ChurchAttendance.E2ETests/**/*" />
-    <None Remove="ChurchAttendance.E2ETests/**/*" />
-  </ItemGroup>
-
-  <ItemGroup>
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.10">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
@@ -27,6 +18,10 @@
          moderate-severity advisory (GHSA-rxmq-m78w-7wmc); pin the patched core package. -->
     <PackageReference Include="SixLabors.ImageSharp" Version="3.1.12" />
     <PackageReference Include="SixLabors.ImageSharp.Drawing" Version="2.1.6" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Shared\SharedKernel\SharedKernel.csproj" />
   </ItemGroup>
 
 </Project>

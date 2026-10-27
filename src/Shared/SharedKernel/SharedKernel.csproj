@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>ChurchAttendance.SharedKernel</RootNamespace>
+    <AssemblyName>ChurchAttendance.SharedKernel</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- IModule's signatures use IServiceCollection, IConfiguration and IEndpointRouteBuilder. -->
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+</Project>

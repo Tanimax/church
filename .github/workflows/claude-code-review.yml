@@ -1,0 +1,59 @@
+name: Revue Claude
+
+# Revue automatique de chaque PR vers main par Claude, contre les standards du dépôt
+# (CLAUDE.md, REVIEW.md). Les problèmes trouvés arrivent en commentaires sur les lignes
+# concernées ; la revue n'approuve ni ne bloque la PR.
+#
+# Prérequis : le secret CLAUDE_CODE_OAUTH_TOKEN (généré avec `claude setup-token`, lié à
+# l'abonnement Claude). Sans lui, le job ne fait rien et le signale.
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, ready_for_review, reopened]
+
+# Un nouveau push remplace la revue en cours de la même PR.
+concurrency:
+  group: claude-review-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  review:
+    if: github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      pull-requests: read
+      issues: read
+      id-token: write
+    steps:
+      # The secret is only handed to this step (never to the job's env, which every step,
+      # third-party action included, would see); the next steps read just the yes/no answer.
+      - name: Jeton Claude présent ?
+        id: token
+        env:
+          TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+        run: |
+          if [ -n "$TOKEN" ]; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::warning::Secret CLAUDE_CODE_OAUTH_TOKEN absent — revue Claude ignorée. Voir docs/revue-automatique.md."
+          fi
+
+      # Actions pinned to a commit (tag in the comment): a moved tag can't change what runs.
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        if: steps.token.outputs.present == 'true'
+        with:
+          fetch-depth: 1
+
+      - uses: anthropics/claude-code-action@d70510b174a1244958df0b03166a54912811f3e6 # v1.0.264
+        if: steps.token.outputs.present == 'true'
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          plugin_marketplaces: "https://github.com/anthropics/claude-code.git"
+          plugins: "code-review@claude-code-plugins"
+          prompt: "/code-review:code-review --comment ${{ github.repository }}/pull/${{ github.event.pull_request.number }}"
+          # --allowedTools: the action only starts the inline-comment server when it's named here.
+          claude_args: |
+            --allowedTools "mcp__github_inline_comment__create_inline_comment"
+            --append-system-prompt "Ce dépôt définit ses standards dans CLAUDE.md et ses consignes de revue dans REVIEW.md, à la racine. Lis-les avant de relire la PR et signale chaque écart qu'elle introduit, en citant la règle. Écris tous tes commentaires en français."

@@ -1,5 +1,6 @@
-using ChurchAttendance.Identity.Contracts;
-using ChurchAttendance.Identity.Infrastructure;
+using ChurchAttendance.Application.Abstractions;
+using ChurchAttendance.Application.Users;
+using ChurchAttendance.Infrastructure.Security;
 using ChurchAttendance.Tests.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -8,8 +9,10 @@ namespace ChurchAttendance.Tests.Services;
 
 public class UserAccountServiceTests
 {
+    private static readonly PasswordHasher Hasher = new();
+
     private static UserAccountService CreateService(CustomWebApplicationFactory factory) =>
-        new(factory.Services.GetRequiredService<IDbContextFactory<IdentityDbContext>>());
+        new(factory.Services.GetRequiredService<IAppDbContextFactory>(), Hasher);
 
     [Fact]
     public async Task CreateUserAsync_NormalizesUsernameAndHashesPassword()
@@ -22,7 +25,7 @@ public class UserAccountServiceTests
         Assert.Equal(UserSaveResult.Saved, result);
         var user = (await service.GetUsersAsync()).Single(u => u.Username == "marie.paul");
         Assert.Equal(UserRole.Secretaire, user.Role);
-        Assert.True(PasswordHashing.VerifyPassword(user.PasswordHash, "motdepasse123"));
+        Assert.True(Hasher.VerifyPassword(user.PasswordHash, "motdepasse123"));
     }
 
     [Fact]
@@ -51,7 +54,7 @@ public class UserAccountServiceTests
         var updated = (await service.GetUsersAsync()).Single(u => u.Id == marie.Id);
         Assert.Equal(UserRole.EcoleDominicale, updated.Role);
         Assert.False(updated.IsActive);
-        Assert.True(PasswordHashing.VerifyPassword(updated.PasswordHash, "motdepasse123"));
+        Assert.True(Hasher.VerifyPassword(updated.PasswordHash, "motdepasse123"));
     }
 
     [Fact]

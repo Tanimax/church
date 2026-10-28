@@ -68,12 +68,12 @@ public sealed class AppFixture : IAsyncLifetime
         }
 
         var config = AppContext.BaseDirectory.Contains("Release", StringComparison.OrdinalIgnoreCase) ? "Release" : "Debug";
-        var candidate = Path.Combine(dir.FullName, "src", "Web", "bin", config, "net10.0", "ChurchAttendance.dll");
+        var candidate = Path.Combine(dir.FullName, "src", "Api", "bin", config, "net10.0", "ChurchAttendance.dll");
 
         if (!File.Exists(candidate))
         {
             throw new FileNotFoundException(
-                $"Could not find ChurchAttendance.dll — build the main project first (dotnet build src/Web/ChurchAttendance.csproj). Looked at: {candidate}");
+                $"Could not find ChurchAttendance.dll — build the main project first (dotnet build src/Api/ChurchAttendance.Api.csproj). Looked at: {candidate}");
         }
 
         return candidate;

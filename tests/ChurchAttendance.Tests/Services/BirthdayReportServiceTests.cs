@@ -1,5 +1,4 @@
-using ChurchAttendance.Features.Reports;
-using ChurchAttendance.Models;
+using ChurchAttendance.Application.Reports;
 
 namespace ChurchAttendance.Tests.Services;
 

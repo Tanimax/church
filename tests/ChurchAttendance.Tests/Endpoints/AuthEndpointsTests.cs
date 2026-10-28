@@ -1,6 +1,4 @@
 using System.Net;
-using ChurchAttendance.Identity.Contracts;
-using ChurchAttendance.Models;
 using ChurchAttendance.Tests.Infrastructure;
 using Microsoft.AspNetCore.Mvc.Testing;
 
@@ -178,7 +176,7 @@ public class AuthEndpointsTests
     public async Task BootstrapAdmin_IsSeededExactlyOnceOnFreshDatabase()
     {
         using var factory = new CustomWebApplicationFactory();
-        await using var db = factory.CreateIdentityDbContext();
+        await using var db = factory.CreateDbContext();
 
         var admins = db.Users.Where(u => u.Username == TestAuth.BootstrapAdminUsername).ToList();
 

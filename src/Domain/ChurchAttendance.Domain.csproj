@@ -1,0 +1,5 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Entities and their rules. References nothing: no EF Core, no ASP.NET, no other layer. -->
+
+</Project>

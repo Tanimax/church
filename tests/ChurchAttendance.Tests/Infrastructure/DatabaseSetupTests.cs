@@ -1,4 +1,4 @@
-using ChurchAttendance.Infrastructure;
+using ChurchAttendance.Infrastructure.Persistence;
 using Microsoft.Extensions.Configuration;
 using Npgsql;
 

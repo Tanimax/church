@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Small utilities every layer may use: the church's clock, public URLs, QR codes.
+       Depends on no other project of the solution. -->
+
+  <ItemGroup>
+    <!-- PublicUrls reads HttpRequest; ChurchClock registers itself in IServiceCollection. -->
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <PackageReference Include="QRCoder" />
+  </ItemGroup>
+
+</Project>

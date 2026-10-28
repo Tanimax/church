@@ -1,0 +1,162 @@
+@page "/admin/reports/sainte-cene"
+@attribute [Authorize]
+@rendermode InteractiveServer
+@inject IAppDbContextFactory DbFactory
+@inject ChurchClock Clock
+
+<PageTitle>Rapport Sainte Cène</PageTitle>
+
+<h1>Rapport Sainte Cène</h1>
+
+<div class="d-flex flex-wrap gap-2 mb-3">
+    <div>
+        <label class="form-label">Année</label>
+        <select class="form-select w-auto" @bind="selectedYear" @bind:after="LoadReport">
+            @foreach (var y in availableYears)
+            {
+                <option value="@y">@y</option>
+            }
+        </select>
+    </div>
+    <div>
+        <label class="form-label">Rechercher</label>
+        <input type="search" class="form-control w-auto" placeholder="Rechercher par nom ou prénom..."
+               @bind="searchTerm" @bind:event="oninput" @bind:after="ResetPage" />
+    </div>
+</div>
+
+@if (rows is null)
+{
+    <p><em>Chargement...</em></p>
+}
+else if (!rows.Any())
+{
+    <p class="text-muted">Aucun membre baptisé actif.</p>
+}
+else if (!filteredRows.Any())
+{
+    <p class="text-muted">Aucun membre trouvé pour cette recherche.</p>
+}
+else
+{
+    <div class="table-responsive">
+        <table class="table table-sm table-bordered text-center">
+            <thead>
+                <tr>
+                    <th class="text-start">Membre</th>
+                    @foreach (var m in MonthLabels)
+                    {
+                        <th>@m</th>
+                    }
+                    <th>Total</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var row in pagedRows)
+                {
+                    <tr>
+                        <td class="text-start">@row.FullName</td>
+                        @for (var i = 1; i <= 12; i++)
+                        {
+                            var present = row.MonthsPresent.Contains(i);
+                            <td class="@(present ? "table-success" : "")">@(present ? "✓" : "")</td>
+                        }
+                        <td><strong>@row.MonthsPresent.Count</strong></td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <span class="text-muted">
+            @filteredRows.Count membre(s) — page @currentPage sur @totalPages
+        </span>
+        <div class="d-flex align-items-center gap-2">
+            <label class="text-muted mb-0" for="pageSize">Par page</label>
+            <select id="pageSize" class="form-select form-select-sm w-auto" @bind="pageSize" @bind:event="onchange" @bind:after="ResetPage">
+                <option value="10">10</option>
+                <option value="25">25</option>
+                <option value="50">50</option>
+                <option value="100">100</option>
+                <option value="@int.MaxValue">Tous</option>
+            </select>
+            <div class="btn-group">
+                <button type="button" class="btn btn-outline-secondary" disabled="@(currentPage <= 1)" @onclick="() => GoToPage(currentPage - 1)">
+                    ‹ Précédent
+                </button>
+                <button type="button" class="btn btn-outline-secondary" disabled="@(currentPage >= totalPages)" @onclick="() => GoToPage(currentPage + 1)">
+                    Suivant ›
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private static readonly string[] MonthLabels =
+        { "Jan", "Fév", "Mar", "Avr", "Mai", "Juin", "Juil", "Août", "Sep", "Oct", "Nov", "Déc" };
+
+    private int selectedYear;
+    private string searchTerm = "";
+    private List<int> availableYears = new();
+    private List<MemberRow>? rows;
+    private int currentPage = 1;
+    private int pageSize = 10;
+
+    private List<MemberRow> filteredRows =>
+        rows is null
+            ? []
+            : string.IsNullOrWhiteSpace(searchTerm)
+                ? rows
+                : rows.Where(r => r.FullName.Contains(searchTerm, StringComparison.OrdinalIgnoreCase)).ToList();
+
+    private int totalPages => Math.Max(1, (int)Math.Ceiling(filteredRows.Count / (double)pageSize));
+
+    private IEnumerable<MemberRow> pagedRows =>
+        filteredRows.Skip((Math.Min(currentPage, totalPages) - 1) * pageSize).Take(pageSize);
+
+    private void ResetPage() => currentPage = 1;
+
+    private void GoToPage(int page) => currentPage = Math.Clamp(page, 1, totalPages);
+
+    protected override async Task OnInitializedAsync()
+    {
+        var currentYear = Clock.Today.Year;
+        selectedYear = currentYear;
+        availableYears = Enumerable.Range(currentYear - 3, 4).Reverse().ToList();
+
+        await LoadReport();
+    }
+
+    private async Task LoadReport()
+    {
+        await using var db = await DbFactory.CreateDbContextAsync();
+
+        var attendances = await db.Attendances
+            .Include(a => a.ServiceSession)
+            .Where(a => a.Type == AttendanceType.SainteCene && a.ServiceSession!.Date.Year == selectedYear)
+            .Select(a => new { a.MemberId, Month = a.ServiceSession!.Date.Month })
+            .ToListAsync();
+
+        var monthsByMember = attendances
+            .GroupBy(a => a.MemberId)
+            .ToDictionary(g => g.Key, g => g.Select(a => a.Month).ToHashSet());
+
+        var members = await db.Members
+            .Where(m => m.IsActive && m.IsBaptized)
+            .OrderBy(m => m.LastName)
+            .ThenBy(m => m.FirstName)
+            .ToListAsync();
+
+        rows = members
+            .Select(m => new MemberRow(
+                m.FullName,
+                monthsByMember.TryGetValue(m.Id, out var months) ? months : new HashSet<int>()))
+            .ToList();
+
+        ResetPage();
+    }
+
+    private record MemberRow(string FullName, HashSet<int> MonthsPresent);
+}

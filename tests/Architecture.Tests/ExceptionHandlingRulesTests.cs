@@ -38,6 +38,21 @@ public class ExceptionHandlingRulesTests
         Assert.True(offenders.Count == 0, "catch vide : " + string.Join(", ", offenders));
     }
 
+    // An interactive page's actions must be able to fail without killing the Blazor
+    // connection: they go through AppComponentBase.TryRunAsync.
+    [Fact]
+    public void InteractivePages_InheritAppComponentBase()
+    {
+        var offenders = SourceFiles()
+            .Where(f => f.Path.EndsWith(".razor") && f.Text.Contains("@rendermode InteractiveServer"))
+            .Where(f => !f.Text.Contains("@inherits AppComponentBase"))
+            .Select(f => f.Path)
+            .ToList();
+
+        Assert.True(offenders.Count == 0,
+            "pages interactives qui n'héritent pas d'AppComponentBase : " + string.Join(", ", offenders));
+    }
+
     private static IEnumerable<(string Path, string Text)> SourceFiles()
     {
         var root = RepositoryRoot();

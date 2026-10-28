@@ -1,15 +1,10 @@
 using ChurchAttendance.Application.Abstractions;
+using ChurchAttendance.Application.Errors;
 using ChurchAttendance.Domain;
+using ChurchAttendance.SharedKernel.Results;
 using Microsoft.EntityFrameworkCore;
 
 namespace ChurchAttendance.Application.Users;
-
-public enum UserSaveResult
-{
-    Saved,
-    UsernameTaken,
-    NotFound
-}
 
 // Every use case on accounts: the Utilisateurs page, the password change button, the login
 // endpoint and the startup seed all go through here. Uses IAppDbContextFactory because most
@@ -31,35 +26,43 @@ public class UserAccountService(IAppDbContextFactory dbFactory, IPasswordHasher 
         return user is not null && passwordHasher.VerifyPassword(user.PasswordHash, password) ? user : null;
     }
 
-    public async Task<UserSaveResult> CreateUserAsync(string username, string password, UserRole role)
+    public async Task<Result> CreateUserAsync(string username, string password, UserRole role)
     {
         await using var db = await dbFactory.CreateDbContextAsync();
 
         var user = User.Create(username, passwordHasher.HashPassword(password), role, DateTime.UtcNow);
         if (await db.Users.AnyAsync(u => u.Username == user.Username))
         {
-            return UserSaveResult.UsernameTaken;
+            return UserErrors.UsernameTaken;
         }
 
         db.Users.Add(user);
-        await db.SaveChangesAsync();
-        return UserSaveResult.Saved;
+        try
+        {
+            await db.SaveChangesAsync();
+        }
+        catch (ConflictException)
+        {
+            // Another admin created the same username between the check above and the insert.
+            return UserErrors.UsernameTaken;
+        }
+        return Result.Success();
     }
 
     // An empty newPassword keeps the current password.
-    public async Task<UserSaveResult> UpdateUserAsync(int userId, string username, UserRole role, bool isActive, string? newPassword)
+    public async Task<Result> UpdateUserAsync(int userId, string username, UserRole role, bool isActive, string? newPassword)
     {
         await using var db = await dbFactory.CreateDbContextAsync();
         var user = await db.Users.FindAsync(userId);
         if (user is null)
         {
-            return UserSaveResult.NotFound;
+            return UserErrors.NotFound;
         }
 
         var normalizedUsername = User.NormalizeUsername(username);
         if (await db.Users.AnyAsync(u => u.Id != userId && u.Username == normalizedUsername))
         {
-            return UserSaveResult.UsernameTaken;
+            return UserErrors.UsernameTaken;
         }
 
         user.Rename(username);
@@ -77,23 +80,30 @@ public class UserAccountService(IAppDbContextFactory dbFactory, IPasswordHasher 
             user.ChangePasswordHash(passwordHasher.HashPassword(newPassword));
         }
 
-        await db.SaveChangesAsync();
-        return UserSaveResult.Saved;
+        try
+        {
+            await db.SaveChangesAsync();
+        }
+        catch (ConflictException)
+        {
+            // Someone took this username between the check above and the update.
+            return UserErrors.UsernameTaken;
+        }
+        return Result.Success();
     }
 
-    // False when there is no such account or currentPassword is wrong.
-    public async Task<bool> ChangePasswordAsync(string username, string currentPassword, string newPassword)
+    public async Task<Result> ChangePasswordAsync(string username, string currentPassword, string newPassword)
     {
         await using var db = await dbFactory.CreateDbContextAsync();
         var user = await db.Users.FirstOrDefaultAsync(u => u.Username == username);
         if (user is null || !passwordHasher.VerifyPassword(user.PasswordHash, currentPassword))
         {
-            return false;
+            return UserErrors.WrongCurrentPassword;
         }
 
         user.ChangePasswordHash(passwordHasher.HashPassword(newPassword));
         await db.SaveChangesAsync();
-        return true;
+        return Result.Success();
     }
 
     // One-time bootstrap: the app used to gate the whole admin area behind a single shared

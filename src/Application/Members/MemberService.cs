@@ -1,6 +1,8 @@
 using ChurchAttendance.Application.Abstractions;
+using ChurchAttendance.Application.Errors;
 using ChurchAttendance.Domain;
 using ChurchAttendance.SharedKernel;
+using ChurchAttendance.SharedKernel.Results;
 using Microsoft.EntityFrameworkCore;
 
 namespace ChurchAttendance.Application.Members;
@@ -10,7 +12,6 @@ namespace ChurchAttendance.Application.Members;
 // Server components on long-lived circuits.
 public class MemberService(IAppDbContextFactory dbFactory, IEmailSender emailSender, ChurchClock clock)
 {
-
     public async Task<List<Member>> GetMembersAsync()
     {
         await using var db = await dbFactory.CreateDbContextAsync();
@@ -31,7 +32,20 @@ public class MemberService(IAppDbContextFactory dbFactory, IEmailSender emailSen
         };
         ApplyDetails(member, form);
         db.Members.Add(member);
-        await db.SaveChangesAsync();
+        for (var attempt = 1; ; attempt++)
+        {
+            try
+            {
+                await db.SaveChangesAsync();
+                break;
+            }
+            catch (ConflictException) when (attempt < 3)
+            {
+                // The random card token collided with an existing one (unique index):
+                // vanishingly rare, so just draw another.
+                member.Token = TokenService.GenerateToken();
+            }
+        }
 
         if (!string.IsNullOrWhiteSpace(member.Email))
         {
@@ -41,31 +55,30 @@ public class MemberService(IAppDbContextFactory dbFactory, IEmailSender emailSen
         return member;
     }
 
-    // Returns false when the member no longer exists.
-    public async Task<bool> UpdateMemberAsync(int memberId, MemberFormModel form)
+    public async Task<Result> UpdateMemberAsync(int memberId, MemberFormModel form)
     {
         await using var db = await dbFactory.CreateDbContextAsync();
         var member = await db.Members.FindAsync(memberId);
         if (member is null)
         {
-            return false;
+            return MemberErrors.NotFound;
         }
 
         member.FirstName = form.FirstName.Trim();
         member.LastName = form.LastName.Trim();
         ApplyDetails(member, form);
         await db.SaveChangesAsync();
-        return true;
+        return Result.Success();
     }
 
-    // Returns the new IsActive value, or null when the member no longer exists.
-    public async Task<bool?> ToggleActiveAsync(int memberId)
+    // On success, the member's new IsActive value.
+    public async Task<Result<bool>> ToggleActiveAsync(int memberId)
     {
         await using var db = await dbFactory.CreateDbContextAsync();
         var member = await db.Members.FindAsync(memberId);
         if (member is null)
         {
-            return null;
+            return MemberErrors.NotFound;
         }
 
         member.IsActive = !member.IsActive;

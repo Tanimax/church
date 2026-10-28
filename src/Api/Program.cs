@@ -18,6 +18,7 @@ builder.Services.ConfigureHttpJsonOptions(options =>
 builder.Services.AddPersistentDataProtection(builder.Configuration);
 builder.Services.AddAppAuthentication();
 builder.Services.AddAppErrorHandling();
+builder.Services.AddHealthChecks();
 
 // Resolved before Build() so a production deploy without ADMIN_PASSWORD fails at startup.
 var adminPassword = DatabaseSetup.ResolveSeedAdminPassword(builder.Configuration, builder.Environment);
@@ -52,6 +53,11 @@ app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 
 app.MapAppEndpoints();
+
+// Liveness for Fly's health check (fly.toml): answers as soon as the app serves requests.
+// It deliberately doesn't query the database: a database outage is already reported to users
+// (503 / error page), and failing this check would make Fly stop routing to the only machine.
+app.MapHealthChecks("/health").AllowAnonymous();
 
 app.Run();
 

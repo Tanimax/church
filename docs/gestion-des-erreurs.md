@@ -8,7 +8,7 @@ la laisse remonter jusqu'à une frontière.
 
 | Catégorie | Exemples | Comment |
 |---|---|---|
-| **Résultat métier attendu** | carte inconnue, non baptisé, nom d'utilisateur déjà pris, doublon de scan | **Pas d'exception.** Le cas d'usage renvoie un `Result` / `Result<T>` (SharedKernel) portant une `Error(Code, Message)`, ou un type de réponse dédié (`CheckInResponse`, `UserSaveResult`). Le message est en français et s'affiche tel quel. |
+| **Résultat métier attendu** | carte inconnue, non baptisé, nom d'utilisateur déjà pris, doublon de scan | **Pas d'exception.** Le cas d'usage renvoie un `Result` / `Result<T>` (SharedKernel) portant une `Error(Code, Message)` tirée du catalogue de sa fonctionnalité (`UserErrors`, `MemberErrors`…), ou un type de réponse dédié quand c'est un contrat d'API (`CheckInResponse`). Le message est en français et s'affiche tel quel. |
 | **Règle du domaine violée** | créer un `User` sans nom | `DomainException` (Domain). La validation des formulaires devrait l'empêcher : c'est le signe d'un bug ou d'un chemin non validé. |
 | **Panne technique** | base indisponible, délai dépassé, API d'e-mail en panne | Exception, traitée **aux frontières** (§ 3). Les pannes passagères de la base sont d'abord **retentées** (§ 2). |
 
@@ -22,6 +22,10 @@ donc pas de Npgsql. Un cas d'usage qui s'attend au conflit la rattrape et en fai
 
 Sinon, elle remonte : `409` côté API, message « modifiée par quelqu'un d'autre » côté page.
 
+Cas gérés : nom d'utilisateur pris entre la vérification et l'enregistrement
+(`UserErrors.UsernameTaken`), jeton de carte déjà existant (on en tire un autre, 3 essais),
+session du jour et présence déjà créées par l'autre scanner (check-in).
+
 ## 2. Résilience
 
 - **Base de données** : les erreurs passagères (redémarrage, connexion coupée, réveil de la
@@ -30,6 +34,10 @@ Sinon, elle remonte : `409` côté API, message « modifiée par quelqu'un d'aut
   `BeginTransaction` devra passer par `Database.CreateExecutionStrategy().ExecuteAsync(...)`.
 - **HTTP sortant** : délai de 10 s (e-mail), au lieu des 100 s par défaut.
 - **Au mieux** : l'envoi d'e-mail rattrape tout, journalise, et ne bloque jamais l'action.
+- **Health check Fly** : `GET /health` (`fly.toml`, `[[http_service.checks]]`). Il ne
+  consulte pas la base : une panne de base est déjà signalée aux utilisateurs, et faire
+  échouer ce check ferait cesser le routage vers la seule machine. Un déploiement dont l'app
+  ne répond pas échoue au lieu de remplacer la version en place.
 - **Démarrage** : on échoue tout de suite si la configuration est fausse (`ADMIN_PASSWORD`,
   fuseau horaire, base) — mieux vaut un déploiement staging qui échoue qu'une prod qui
   plante au premier dimanche.
@@ -40,7 +48,8 @@ Sinon, elle remonte : `409` côté API, message « modifiée par quelqu'un d'aut
 |---|---|---|
 | **API `/api/*`** | `Startup/ErrorHandlingSetup.cs` | JSON `ProblemDetails` avec un titre en français et `traceId` : `400` requête invalide / règle du domaine, `401` connexion requise, `403`, `404`, `409` conflit, `503` base momentanément indisponible, `500` erreur inattendue. Vaut aussi pour les codes d'erreur sans exception. |
 | **Page (première requête)** | `Components/Pages/Error.razor` | Page « Une erreur est survenue » en français, avec la référence de l'erreur, sans détail technique. URL inconnue : `Components/Pages/NotFound.razor`. |
-| **Actions d'une page interactive** | `Components/AppComponentBase.cs` | La page hérite de `AppComponentBase` et lance ses actions via `TryRunAsync(action, "Impossible de …")` : en cas d'échec, message en français dans la page (avec une référence), le formulaire reste ouvert et la saisie est conservée. |
+| **Actions d'une page interactive** | `Components/AppComponentBase.cs` | **Toute** page interactive hérite de `AppComponentBase` (vérifié par un test) et lance ses chargements et actions via `TryRunAsync(action, "Impossible de …")` : en cas d'échec, message en français (composant `<ErrorAlert>`) avec une référence, le formulaire reste ouvert et la saisie est conservée. |
+| **Lien de carte inconnu** | `Features/Members/CardEndpoints.cs` | Page HTML « Carte introuvable » (404) : le lien est ouvert dans un navigateur. |
 | **Dernier recours Blazor** | `#blazor-error-ui` dans les layouts | Bandeau « Une erreur inattendue est survenue et la page ne répond plus — Recharger la page ». Ne devrait apparaître que si une action n'est pas passée par `TryRunAsync`. |
 
 > Pourquoi pas un `ErrorBoundary` ? Les layouts sont rendus en statique et chaque page devient

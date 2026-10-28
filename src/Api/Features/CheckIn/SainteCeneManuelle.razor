@@ -2,6 +2,7 @@
 @layout MobileLayout
 @attribute [Authorize]
 @rendermode InteractiveServer
+@inherits AppComponentBase
 @inject IAppDbContextFactory DbFactory
 @inject ChurchClock Clock
 
@@ -111,7 +112,8 @@
 
     private int searchResultsTotalCount => MatchingMembers.Count();
 
-    protected override async Task OnInitializedAsync() => await LoadDataAsync();
+    protected override async Task OnInitializedAsync() =>
+        actionError = await TryRunAsync(LoadDataAsync, "Impossible de charger les membres");
 
     private async Task LoadDataAsync()
     {
@@ -156,31 +158,42 @@
         checkingInMemberId = member.Id;
         try
         {
-            await using var db = await DbFactory.CreateDbContextAsync();
-            var tracked = await db.Members.FirstOrDefaultAsync(m => m.Id == member.Id && m.IsActive);
-            if (tracked is null)
+            // An unexpected failure (database unavailable...) shows a message; the member
+            // stays unchecked and can be tapped again.
+            var failure = await TryRunAsync(() => RecordSainteCeneAsync(member), $"Impossible d'enregistrer {member.FullName}");
+            if (failure is not null)
             {
-                actionError = $"{member.FullName} n'est plus un membre actif.";
-                await LoadDataAsync();
-                return;
-            }
-
-            var response = await CheckInService.CheckInMemberAsync(db, Clock, tracked, AttendanceType.SainteCene);
-
-            if (response.CheckedInAt.HasValue)
-            {
-                // Covers both "ok" and "duplicate" — either way the member is now checked in.
-                sainteCeneToday[member.Id] = response.CheckedInAt.Value;
-            }
-            else if (response.Status == "not_baptized")
-            {
-                actionError = $"{member.FullName} n'est pas baptisé(e) — Sainte Cène non disponible.";
-                member.IsBaptized = tracked.IsBaptized;
+                actionError = failure;
             }
         }
         finally
         {
             checkingInMemberId = null;
+        }
+    }
+
+    private async Task RecordSainteCeneAsync(Member member)
+    {
+        await using var db = await DbFactory.CreateDbContextAsync();
+        var tracked = await db.Members.FirstOrDefaultAsync(m => m.Id == member.Id && m.IsActive);
+        if (tracked is null)
+        {
+            actionError = $"{member.FullName} n'est plus un membre actif.";
+            await LoadDataAsync();
+            return;
+        }
+
+        var response = await CheckInService.CheckInMemberAsync(db, Clock, tracked, AttendanceType.SainteCene);
+
+        if (response.CheckedInAt.HasValue)
+        {
+            // Covers both "ok" and "duplicate" — either way the member is now checked in.
+            sainteCeneToday[member.Id] = response.CheckedInAt.Value;
+        }
+        else if (response.Status == "not_baptized")
+        {
+            actionError = $"{member.FullName} n'est pas baptisé(e) — Sainte Cène non disponible.";
+            member.IsBaptized = tracked.IsBaptized;
         }
     }
 }

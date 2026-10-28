@@ -13,7 +13,8 @@ public static class CardEndpoints
             var member = await db.Members.FirstOrDefaultAsync(m => m.Token == token && m.IsActive);
             if (member is null)
             {
-                return Results.NotFound("Carte introuvable.");
+                // A member opens this link in a browser: answer with a page, not a JSON string.
+                return Results.Content(CardNotFoundHtml, "text/html; charset=utf-8", statusCode: StatusCodes.Status404NotFound);
             }
 
             return Results.Text(BuildCardHtml(member.FullName, token), "text/html");
@@ -45,6 +46,24 @@ public static class CardEndpoints
             return Results.Json(manifest, contentType: "application/manifest+json");
         });
     }
+
+    private const string CardNotFoundHtml = """
+        <!DOCTYPE html>
+        <html lang="fr">
+        <head>
+            <meta charset="utf-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Carte introuvable</title>
+            <link rel="stylesheet" href="/card/style.css">
+        </head>
+        <body>
+            <main class="card">
+                <h1>Carte introuvable</h1>
+                <p class="hint">Ce lien ne correspond à aucune carte active. Demandez une nouvelle carte au secrétariat.</p>
+            </main>
+        </body>
+        </html>
+        """;
 
     private static string BuildCardHtml(string fullName, string token)
     {

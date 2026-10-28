@@ -1,6 +1,5 @@
 using System.Net;
-using ChurchAttendance.Data;
-using ChurchAttendance.Models;
+using ChurchAttendance.Infrastructure.Persistence;
 using ChurchAttendance.Tests.Infrastructure;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;

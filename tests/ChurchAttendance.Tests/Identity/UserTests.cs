@@ -1,5 +1,3 @@
-using ChurchAttendance.Identity.Contracts;
-using ChurchAttendance.Identity.Core;
 
 namespace ChurchAttendance.Tests.Identity;
 

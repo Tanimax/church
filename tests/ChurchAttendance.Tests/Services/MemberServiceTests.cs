@@ -1,4 +1,4 @@
-using ChurchAttendance.Features.Members;
+using ChurchAttendance.Application.Members;
 using ChurchAttendance.Tests.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;

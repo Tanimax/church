@@ -1,4 +1,3 @@
-using ChurchAttendance.Common;
 using Microsoft.AspNetCore.Http;
 
 namespace ChurchAttendance.Tests.Common;

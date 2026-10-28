@@ -1,0 +1,81 @@
+@page "/admin/reports/anniversaires"
+@attribute [Authorize]
+@rendermode InteractiveServer
+@inject IAppDbContextFactory DbFactory
+@inject ChurchClock Clock
+
+<PageTitle>Rapport d'anniversaires</PageTitle>
+
+<h1>Rapport d'anniversaires</h1>
+
+<div class="mb-3">
+    <label class="form-label">Dimanche</label>
+    <input type="date" class="form-control w-auto" @bind="selectedSunday" @bind:after="LoadReport" />
+    <div class="form-text">
+        Membres dont l'anniversaire tombe entre le @WeekStart.ToString("dd/MM/yyyy") et le @WeekEnd.ToString("dd/MM/yyyy").
+    </div>
+</div>
+
+@if (matches is null)
+{
+    <p><em>Chargement...</em></p>
+}
+else if (!matches.Any())
+{
+    <p class="text-muted">Aucun anniversaire cette semaine.</p>
+}
+else
+{
+    <table class="table table-sm table-striped">
+        <thead>
+            <tr>
+                <th>Date</th>
+                <th>Nom</th>
+                <th>Prénom</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var (date, member) in matches)
+            {
+                <tr>
+                    <td>@DayNames[(int)date.DayOfWeek] @date.Day @MonthNames[date.Month]</td>
+                    <td>@member.LastName</td>
+                    <td>@member.FirstName</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private static readonly string[] DayNames =
+        { "Dimanche", "Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi" };
+
+    private static readonly string[] MonthNames =
+        { "", "janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre", "décembre" };
+
+    private DateOnly selectedSunday;
+    private List<(DateOnly Date, Member Member)>? matches;
+
+    // "La semaine incluant le dimanche du rapport" means the week leading up to and
+    // ending on that Sunday (Monday through Sunday), not the week starting from it.
+    private DateOnly WeekStart => selectedSunday.AddDays(-6);
+    private DateOnly WeekEnd => selectedSunday;
+
+    protected override async Task OnInitializedAsync()
+    {
+        selectedSunday = Clock.MostRecentSunday;
+        await LoadReport();
+    }
+
+    private async Task LoadReport()
+    {
+        await using var db = await DbFactory.CreateDbContextAsync();
+
+        var membersWithBirthday = await db.Members
+            .Where(m => m.IsActive && m.BirthDay != null && m.BirthMonth != null)
+            .ToListAsync();
+
+        matches = BirthdayReportService.FindBirthdaysInWeek(membersWithBirthday, WeekStart);
+    }
+}

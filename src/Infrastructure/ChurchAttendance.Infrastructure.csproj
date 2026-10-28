@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Everything that touches the outside world: PostgreSQL (AppDbContext and its
+       migrations), the email API, password hashing, member card images. -->
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" />
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
+    <PackageReference Include="SixLabors.ImageSharp" />
+    <PackageReference Include="SixLabors.ImageSharp.Drawing" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Application\ChurchAttendance.Application.csproj" />
+    <ProjectReference Include="..\Domain\ChurchAttendance.Domain.csproj" />
+    <ProjectReference Include="..\SharedKernel\ChurchAttendance.SharedKernel.csproj" />
+  </ItemGroup>
+
+</Project>

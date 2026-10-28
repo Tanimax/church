@@ -1,0 +1,21 @@
+using ChurchAttendance.Application.Abstractions;
+using ChurchAttendance.Infrastructure.Cards;
+using ChurchAttendance.Infrastructure.Email;
+using ChurchAttendance.Infrastructure.Persistence;
+using ChurchAttendance.Infrastructure.Security;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+
+namespace ChurchAttendance.Infrastructure;
+
+public static class DependencyInjection
+{
+    public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
+    {
+        services.AddAppDatabase(configuration);
+        services.AddHttpClient<IEmailSender, EmailService>();
+        services.AddSingleton<IPasswordHasher, PasswordHasher>();
+        services.AddSingleton<IMemberCardRenderer, MemberCardRenderer>();
+        return services;
+    }
+}

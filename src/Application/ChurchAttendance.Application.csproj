@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Use cases. Talks to the database only through IAppDbContext (EF Core's DbSet and query
+       operators, but no provider and no DbContext), and to the outside world through the
+       interfaces in Abstractions/, implemented by Infrastructure. -->
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Domain\ChurchAttendance.Domain.csproj" />
+    <ProjectReference Include="..\SharedKernel\ChurchAttendance.SharedKernel.csproj" />
+  </ItemGroup>
+
+</Project>

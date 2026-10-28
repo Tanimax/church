@@ -1,6 +1,5 @@
-using ChurchAttendance.Data;
-using ChurchAttendance.Features.Reports;
-using ChurchAttendance.Models;
+using ChurchAttendance.Infrastructure.Persistence;
+using ChurchAttendance.Application.Reports;
 using ChurchAttendance.Tests.Infrastructure;
 
 namespace ChurchAttendance.Tests.Services;

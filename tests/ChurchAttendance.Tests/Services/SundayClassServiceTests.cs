@@ -1,6 +1,6 @@
-using ChurchAttendance.Data;
-using ChurchAttendance.Features.SundayClasses;
-using ChurchAttendance.Models;
+using ChurchAttendance.Application.Abstractions;
+using ChurchAttendance.Infrastructure.Persistence;
+using ChurchAttendance.Application.SundayClasses;
 using ChurchAttendance.Tests.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -10,7 +10,7 @@ namespace ChurchAttendance.Tests.Services;
 public class SundayClassServiceTests
 {
     private static SundayClassService CreateService(CustomWebApplicationFactory factory) =>
-        new(factory.Services.GetRequiredService<IDbContextFactory<AppDbContext>>());
+        new(factory.Services.GetRequiredService<IAppDbContextFactory>());
 
     private static async Task<Member> AddMemberAsync(CustomWebApplicationFactory factory, string firstName)
     {

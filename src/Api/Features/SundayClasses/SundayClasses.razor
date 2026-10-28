@@ -10,7 +10,7 @@
 
 <ErrorAlert Message="@pageError" />
 
-<AuthorizeView Roles="Admin,EcoleDominicale" Context="addAuthContext">
+<AuthorizeView Policy="@AuthorizationPolicies.ManageMembers" Context="addAuthContext">
     <Authorized>
         <div class="d-flex justify-content-end mb-3">
             <button type="button" class="btn btn-primary" @onclick="OpenAddModal">+ Ajouter une classe</button>
@@ -39,7 +39,7 @@
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-link" @onclick="CloseAddModal">Annuler</button>
-                        <button type="submit" class="btn btn-primary">Créer la classe</button>
+                        <button type="submit" class="btn btn-primary" disabled="@addSaving">@(addSaving ? "Création..." : "Créer la classe")</button>
                     </div>
                 </EditForm>
             </div>
@@ -74,7 +74,7 @@ else
                         <td>@c.Name</td>
                         <td>@memberCounts.GetValueOrDefault(c.Id, 0)</td>
                         <td>
-                            <AuthorizeView Roles="Admin,EcoleDominicale" Context="manageAuthContext">
+                            <AuthorizeView Policy="@AuthorizationPolicies.ManageMembers" Context="manageAuthContext">
                                 <Authorized>
                                     <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="() => OpenManageModal(c)">
                                         Gérer
@@ -162,9 +162,6 @@ else
 }
 
 @code {
-    [CascadingParameter]
-    private Task<AuthenticationState>? AuthenticationStateTask { get; set; }
-
     private List<SundayClass>? classes;
     private Dictionary<int, int> memberCounts = new();
 
@@ -209,15 +206,7 @@ else
         memberCounts = await SundayClassService.GetMemberCountsAsync();
     }
 
-    private async Task<bool> CanManageClassesAsync()
-    {
-        if (AuthenticationStateTask is null)
-        {
-            return false;
-        }
-        var authState = await AuthenticationStateTask;
-        return authState.User.IsInRole(nameof(UserRole.Admin)) || authState.User.IsInRole(nameof(UserRole.EcoleDominicale));
-    }
+    private Task<bool> CanManageClassesAsync() => IsAuthorizedAsync(AuthorizationPolicies.ManageMembers);
 
     private async Task OpenAddModal()
     {
@@ -235,17 +224,36 @@ else
 
     private void CloseAddModal() => showAddModal = false;
 
+    // True while a creation is being saved: a double click must not create the class twice
+    // (both clicks would pass the duplicate-name check before either is saved).
+    private bool addSaving;
+
     private async Task HandleAddSubmit()
     {
-        if (!await CanManageClassesAsync())
+        // Set before the first await: Blazor runs the next click's handler as soon as this one
+        // awaits. A click handled after the class was created (modal closed) is ignored too.
+        if (addSaving || !showAddModal)
         {
-            showAddModal = false;
             return;
         }
+        addSaving = true;
 
         Result result = Result.Success();
-        addError = await TryRunAsync(async () => result = await SundayClassService.CreateClassAsync(addFormModel.Name),
-            "Impossible de créer la classe");
+        try
+        {
+            if (!await CanManageClassesAsync())
+            {
+                showAddModal = false;
+                return;
+            }
+
+            addError = await TryRunAsync(async () => result = await SundayClassService.CreateClassAsync(addFormModel.Name),
+                "Impossible de créer la classe");
+        }
+        finally
+        {
+            addSaving = false;
+        }
         if (addError is not null)
         {
             return;

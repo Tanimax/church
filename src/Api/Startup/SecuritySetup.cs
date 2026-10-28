@@ -6,12 +6,14 @@ using Microsoft.AspNetCore.HttpOverrides;
 
 namespace ChurchAttendance.Startup;
 
-// Named policies for endpoints. Pages check the same roles with AuthorizeView Roles="..."
-// for the buttons, and again in the handlers (a hidden button can still be clicked by a
-// crafted Blazor event).
+// Named policies: the single place that says which roles may do what. Endpoints use them
+// with RequireAuthorization, pages with <AuthorizeView Policy="..."> for the buttons and
+// AppComponentBase.IsAuthorizedAsync in the handlers (a hidden button can still be
+// triggered by a crafted Blazor event).
 public static class AuthorizationPolicies
 {
-    // Create, edit, activate or deactivate members: Admin and École du dimanche, not Secrétaire.
+    // Create, edit, activate or deactivate members and organise the Sunday school classes:
+    // Admin and École du dimanche, not Secrétaire.
     public const string ManageMembers = "ManageMembers";
 }
 

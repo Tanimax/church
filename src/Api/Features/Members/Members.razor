@@ -28,7 +28,7 @@
     </div>
     <div class="d-flex gap-2">
         <a class="btn btn-outline-secondary" href="@ExportUrl" target="_blank">Exporter en Excel</a>
-        <AuthorizeView Roles="Admin,EcoleDominicale" Context="addAuthContext">
+        <AuthorizeView Policy="@AuthorizationPolicies.ManageMembers" Context="addAuthContext">
             <Authorized>
                 <button type="button" class="btn btn-primary" @onclick="OpenAddModal">+ Ajouter un membre</button>
             </Authorized>
@@ -117,7 +117,7 @@
                         </div>
                         <div class="modal-footer">
                             <button type="button" class="btn btn-link" @onclick="CloseAddModal">Annuler</button>
-                            <button type="submit" class="btn btn-primary">Créer la carte</button>
+                            <button type="submit" class="btn btn-primary" disabled="@addSaving">@(addSaving ? "Création..." : "Créer la carte")</button>
                         </div>
                     </EditForm>
                 }
@@ -328,14 +328,14 @@ else
                                 <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="() => OpenCardModal(member)">
                                     Voir la carte
                                 </button>
-                                <AuthorizeView Roles="Admin,EcoleDominicale" Context="editAuthContext">
+                                <AuthorizeView Policy="@AuthorizationPolicies.ManageMembers" Context="editAuthContext">
                                     <Authorized>
                                         <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="() => OpenEditModal(member)">
                                             Modifier
                                         </button>
                                     </Authorized>
                                 </AuthorizeView>
-                                <AuthorizeView Roles="Admin,EcoleDominicale" Context="toggleAuthContext">
+                                <AuthorizeView Policy="@AuthorizationPolicies.ManageMembers" Context="toggleAuthContext">
                                     <Authorized>
                                         <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="() => ToggleActive(member)">
                                             @(member.IsActive ? "Désactiver" : "Réactiver")
@@ -378,9 +378,6 @@ else
 @code {
     private static readonly string[] MonthNames =
         { "", "Janvier", "Février", "Mars", "Avril", "Mai", "Juin", "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre" };
-
-    [CascadingParameter]
-    private Task<AuthenticationState>? AuthenticationStateTask { get; set; }
 
     private List<Member>? members;
     private string searchTerm = "";
@@ -484,15 +481,7 @@ else
         members = await MemberService.GetMembersAsync();
     }
 
-    private async Task<bool> CanManageMembersAsync()
-    {
-        if (AuthenticationStateTask is null)
-        {
-            return false;
-        }
-        var authState = await AuthenticationStateTask;
-        return authState.User.IsInRole(nameof(UserRole.Admin)) || authState.User.IsInRole(nameof(UserRole.EcoleDominicale));
-    }
+    private Task<bool> CanManageMembersAsync() => IsAuthorizedAsync(AuthorizationPolicies.ManageMembers);
 
     private async Task OpenAddModal()
     {
@@ -517,17 +506,37 @@ else
         addCreatedMember = null;
     }
 
+    // True while a creation is being saved: a burst of clicks on "Créer la carte" must create
+    // one member, not one per click.
+    private bool addSaving;
+
     private async Task HandleAddSubmit()
     {
-        if (!await CanManageMembersAsync())
+        // Set before the first await: Blazor runs the next click's handler as soon as this one
+        // awaits. A click handled after the member was created (the modal now shows the card)
+        // is ignored too.
+        if (addSaving || addCreatedMember is not null)
         {
-            showAddModal = false;
             return;
         }
+        addSaving = true;
 
-        addError = await TryRunAsync(async () =>
-            addCreatedMember = await MemberService.CreateMemberAsync(addFormModel, Nav.BaseUri),
-            "Impossible de créer le membre");
+        try
+        {
+            if (!await CanManageMembersAsync())
+            {
+                showAddModal = false;
+                return;
+            }
+
+            addError = await TryRunAsync(async () =>
+                addCreatedMember = await MemberService.CreateMemberAsync(addFormModel, Nav.BaseUri),
+                "Impossible de créer le membre");
+        }
+        finally
+        {
+            addSaving = false;
+        }
         if (addError is not null || addCreatedMember is null)
         {
             return;
@@ -596,6 +605,7 @@ else
         // The button is hidden from Secrétaire via AuthorizeView; check again here.
         if (!await CanManageMembersAsync())
         {
+            pageError = "Accès refusé : seuls l'administrateur et l'école du dimanche peuvent activer ou désactiver un membre.";
             return;
         }
 

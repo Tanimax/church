@@ -8,6 +8,9 @@ public class TextSearchTests
     [InlineData("Éloïse Gagné", "loïse g")]
     [InlineData("François Côté", "francois cote")]
     [InlineData("Jean Dupont", " jean ")]
+    [InlineData("Jean-Pierre Côté", "jean pierre")]
+    [InlineData("Jean-Pierre Côté", "jeanpierre cote")]
+    [InlineData("Marie Saint-Amour", "saint amour")]
     [InlineData("Jean Dupont", "")]
     [InlineData("Jean Dupont", null)]
     public void Contains_IgnoresCaseAccentsAndSurroundingSpaces(string text, string? term)
@@ -26,6 +29,7 @@ public class TextSearchTests
     [Theory]
     [InlineData("Adolescents", " adolescents ", true)]
     [InlineData("Préados", "PREADOS", true)]
+    [InlineData("Pré-ados", "preados", true)]
     [InlineData("Adultes", "Adolescents", false)]
     public void SameText_IgnoresCaseAccentsAndSurroundingSpaces(string a, string b, bool expected)
     {

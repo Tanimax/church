@@ -1,5 +1,6 @@
 using ChurchAttendance.Application.Errors;
 using ChurchAttendance.Startup;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Authorization;
 
@@ -13,6 +14,15 @@ public abstract class AppComponentBase : ComponentBase
 {
     [Inject] private ILoggerFactory LoggerFactory { get; set; } = default!;
     [Inject] private AuthenticationStateProvider AuthenticationStateProvider { get; set; } = default!;
+    [Inject] private IAuthorizationService AuthorizationService { get; set; } = default!;
+
+    // For event handlers: whether the current user satisfies the policy (AuthorizationPolicies).
+    // The matching button is hidden with <AuthorizeView Policy="...">; check again before acting.
+    protected async Task<bool> IsAuthorizedAsync(string policy)
+    {
+        var user = (await AuthenticationStateProvider.GetAuthenticationStateAsync()).User;
+        return (await AuthorizationService.AuthorizeAsync(user, policy)).Succeeded;
+    }
 
     // Runs the action. Returns null when it succeeded, otherwise the message to display,
     // starting with whatFailed (e.g. "Impossible de créer l'utilisateur").

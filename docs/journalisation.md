@@ -26,7 +26,8 @@ Chaque entrée porte ses **scopes**, c'est-à-dire le contexte de la requête :
 - `TraceId` : la référence montrée à l'utilisateur pour une erreur d'API ou de page.
 - `RequestPath`, `RequestId` : ajoutés par ASP.NET Core.
 - `UserName`, `Role` : le compte du personnel connecté, ou `(anonyme)`. Ils sont ajoutés par
-  `LoggingSetup.UseUserLogScope`, placé en tête du pipeline : même la ligne écrite par le
+  `LoggingSetup.UseUserLogScope`, placé juste après les en-têtes de Fly
+  (`UseFlyForwardedHeaders`) et avant la gestion des erreurs : même la ligne écrite par le
   gestionnaire d'exceptions les porte.
 - `Page` : la page interactive, pour ce qui est journalisé pendant une action de page.
   Ajoutée par `AppComponentBase.TryRunAsync`, parce que les événements Blazor s'exécutent

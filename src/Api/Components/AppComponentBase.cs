@@ -19,16 +19,17 @@ public abstract class AppComponentBase : ComponentBase
     protected async Task<string?> TryRunAsync(Func<Task> action, string whatFailed)
     {
         var logger = LoggerFactory.CreateLogger(GetType());
-
-        // Blazor events run on the circuit, outside the HTTP request and its user scope
-        // (LoggingSetup.UseUserLogScope): give every log written by the action the page and user.
-        var user = (await AuthenticationStateProvider.GetAuthenticationStateAsync()).User;
-        var fields = LoggingSetup.UserFields(user);
-        fields.Add(new("Page", GetType().Name));
-        using var _ = logger.BeginScope(new LogScope(fields));
-
+        IDisposable? scope = null;
         try
         {
+            // Blazor events run on the circuit, outside the HTTP request and its user scope
+            // (LoggingSetup.UseUserLogScope): give every log written by the action the page and user.
+            // Inside the try: a failure reading the user must not get past this boundary either.
+            var user = (await AuthenticationStateProvider.GetAuthenticationStateAsync()).User;
+            var fields = LoggingSetup.UserFields(user);
+            fields.Add(new("Page", GetType().Name));
+            scope = logger.BeginScope(new LogScope(fields));
+
             await action();
             return null;
         }
@@ -44,6 +45,10 @@ public abstract class AppComponentBase : ComponentBase
                 ConflictException => $"{whatFailed} : cette donnée vient d'être modifiée par quelqu'un d'autre. Réessayez.",
                 _ => $"{whatFailed} : une erreur inattendue est survenue. Réessayez dans un instant (réf. {reference}).",
             };
+        }
+        finally
+        {
+            scope?.Dispose();
         }
     }
 }

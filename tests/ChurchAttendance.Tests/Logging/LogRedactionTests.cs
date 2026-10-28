@@ -15,4 +15,24 @@ public class LogRedactionTests
     {
         Assert.Equal(expected, LogRedaction.MaskEmail(email));
     }
+
+    [Fact]
+    public void MaskEmailsIn_MasksEveryAddressInAFreeText()
+    {
+        var body = "{\"message\":\"You can only send testing emails to your own email address (owner.name@gmail.com).\"}";
+
+        var masked = LogRedaction.MaskEmailsIn(body);
+
+        Assert.Contains("o***@gmail.com", masked);
+        Assert.DoesNotContain("owner.name", masked);
+        Assert.StartsWith("{\"message\":\"You can only send", masked);
+    }
+
+    [Theory]
+    [InlineData(null, "")]
+    [InlineData("Internal Server Error", "Internal Server Error")]
+    public void MaskEmailsIn_LeavesTextWithoutAddressAlone(string? text, string expected)
+    {
+        Assert.Equal(expected, LogRedaction.MaskEmailsIn(text));
+    }
 }

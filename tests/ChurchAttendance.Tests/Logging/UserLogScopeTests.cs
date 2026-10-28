@@ -52,7 +52,7 @@ public class UserLogScopeTests
         Assert.Equal(HttpStatusCode.InternalServerError, response.StatusCode);
         var errors = logs.GetSnapshot().Where(r => r.Level == LogLevel.Error).ToList();
         // The failure itself is logged, with its exception (not only the database's own lines).
-        Assert.Contains(errors, r => r.Category.EndsWith("ApiExceptionHandler") && r.Exception is not null);
+        Assert.Contains(errors, r => r.Category?.EndsWith("ApiExceptionHandler") == true && r.Exception is not null);
         var withoutUser = errors
             .Where(record => !record.Scopes.Any(s =>
                 s is IEnumerable<KeyValuePair<string, object?>> fields

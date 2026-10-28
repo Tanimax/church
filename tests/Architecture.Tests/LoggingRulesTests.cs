@@ -11,7 +11,7 @@ public class LoggingRulesTests
     // logger.LogX($"...") or logger.LogX(ex, $"..."): the values are baked into the text, so the
     // log loses its searchable fields and every message is a different template.
     private static readonly Regex InterpolatedLogMessage = new(
-        @"\.Log(Trace|Debug|Information|Warning|Error|Critical)?\s*\((\s*[\w.]+\s*,)*\s*\$@?""", RegexOptions.Compiled);
+        @"\.Log(Trace|Debug|Information|Warning|Error|Critical)?\s*\((\s*[\w.]+\s*,)*\s*(@\$|\$+@?)""", RegexOptions.Compiled);
 
     [Fact]
     public void NoConsoleWrite_OnlyILogger()
@@ -47,6 +47,9 @@ public class LoggingRulesTests
     [InlineData("logger.LogWarning($\"Échec pour {email}\");")]
     [InlineData("logger.LogError(ex, $\"Échec {id}\");")]
     [InlineData("_logger.Log(LogLevel.Information, $\"x {y}\");")]
+    [InlineData("logger.LogWarning(@$\"Échec pour {email}\");")]
+    [InlineData("logger.LogWarning($@\"Échec pour {email}\");")]
+    [InlineData("logger.LogWarning($$\"\"\"Échec pour {{email}}\"\"\");")]
     public void InterpolatedLogMessage_IsDetected(string line)
     {
         Assert.Matches(InterpolatedLogMessage, line);

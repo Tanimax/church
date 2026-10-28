@@ -22,7 +22,7 @@ builder.Services.AddAppErrorHandling();
 builder.Services.AddHealthChecks();
 
 // Resolved before Build() so a production deploy without ADMIN_PASSWORD fails at startup.
-var adminPassword = DatabaseSetup.ResolveSeedAdminPassword(builder.Configuration, builder.Environment);
+var (adminPassword, isDevelopmentAdminPassword) = DatabaseSetup.ResolveSeedAdminPassword(builder.Configuration, builder.Environment);
 
 builder.Services.AddChurchClock(builder.Configuration);
 builder.Services.AddApplication();
@@ -30,7 +30,7 @@ builder.Services.AddInfrastructure(builder.Configuration);
 
 var app = builder.Build();
 
-if (adminPassword == DatabaseSetup.DevelopmentAdminPassword)
+if (isDevelopmentAdminPassword)
 {
     app.Logger.LogWarning("ADMIN_PASSWORD non défini : le mot de passe de développement est utilisé pour le premier compte admin.");
 }

@@ -10,8 +10,8 @@ namespace ChurchAttendance.Startup;
 // - /api/*: every failure, thrown or returned as a bare status code, becomes a ProblemDetails
 //   JSON body with a French title and the request id, so the scanner can say what went wrong.
 // - pages: unhandled exceptions show the French /Error page, unknown URLs the /not-found page.
-// Exceptions are logged once, by ASP.NET Core's exception handler middleware; nothing here
-// logs them again.
+// Exceptions are logged once: by ApiExceptionHandler for /api/* (since .NET 10 the middleware
+// no longer logs what an IExceptionHandler handled), by the exception handler middleware for pages.
 public static class ErrorHandlingSetup
 {
     public static IServiceCollection AddAppErrorHandling(this IServiceCollection services)

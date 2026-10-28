@@ -57,7 +57,8 @@ public class EmailService(HttpClient httpClient, IConfiguration config, ILogger<
             if (!response.IsSuccessStatusCode)
             {
                 var body = await response.Content.ReadAsStringAsync();
-                logger.LogWarning("Échec de l'envoi du courriel à {Email} : {Status} {Body}", LogRedaction.MaskEmail(toEmail), response.StatusCode, body);
+                logger.LogWarning("Échec de l'envoi du courriel à {Email} : {Status} {Body}",
+                    LogRedaction.MaskEmail(toEmail), response.StatusCode, LogRedaction.MaskEmailsIn(body));
             }
         }
         catch (Exception ex)

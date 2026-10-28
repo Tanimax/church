@@ -21,8 +21,8 @@ public static class LoggingSetup
     // Every log line written while handling a request carries who made it (scopes are printed
     // because Logging:Console:FormatterOptions:IncludeScopes is true). Staff account names
     // only — no member data (docs/journalisation.md).
-    // Registered first, so the lines written by the exception handlers are covered too; the
-    // user is read when a line is written, since authentication runs later in the pipeline.
+    // Registered before the error handling, so the lines written by the exception handlers are
+    // covered too; the user is read when a line is written, since authentication runs later.
     public static WebApplication UseUserLogScope(this WebApplication app)
     {
         var logger = app.Services.GetRequiredService<ILoggerFactory>().CreateLogger("ChurchAttendance.Request");

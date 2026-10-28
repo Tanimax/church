@@ -60,14 +60,17 @@ session du jour et présence déjà créées par l'autre scanner (check-in).
 ## 4. Journalisation
 
 - **Une seule fois, à la frontière.** Jamais de « catch → log → rethrow ».
-  - API et pages : le middleware d'exceptions d'ASP.NET Core journalise ; on ne relogue pas.
+  - API : `ApiExceptionHandler` journalise (depuis .NET 10, le middleware ne le fait plus
+    pour une exception qu'un `IExceptionHandler` a traitée).
+  - Pages : le middleware d'exceptions d'ASP.NET Core journalise ; on ne relogue pas.
   - Pages interactives : `TryRunAsync` journalise avec la page, l'action et la référence.
 - La **référence** affichée à l'utilisateur se retrouve dans les logs :
   `fly logs | grep <référence>`.
   - API et page d'erreur : c'est le `TraceId` de la requête, présent dans chaque ligne de log
-    grâce à `Logging:Console:IncludeScopes` (`appsettings.json`).
+    grâce à `Logging:Console:FormatterOptions:IncludeScopes` (`appsettings.json`).
   - Actions de page interactive (`réf. xxxxxxxx`) : elle figure dans le message du log
     écrit par `TryRunAsync`.
+- Le reste (niveaux, format, données personnelles) : [journalisation.md](journalisation.md).
 
 ## 5. Règles
 

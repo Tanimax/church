@@ -1,5 +1,7 @@
 using ChurchAttendance.Application.Errors;
+using ChurchAttendance.Startup;
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Authorization;
 
 namespace ChurchAttendance.Components;
 
@@ -10,11 +12,21 @@ namespace ChurchAttendance.Components;
 public abstract class AppComponentBase : ComponentBase
 {
     [Inject] private ILoggerFactory LoggerFactory { get; set; } = default!;
+    [Inject] private AuthenticationStateProvider AuthenticationStateProvider { get; set; } = default!;
 
     // Runs the action. Returns null when it succeeded, otherwise the message to display,
     // starting with whatFailed (e.g. "Impossible de créer l'utilisateur").
     protected async Task<string?> TryRunAsync(Func<Task> action, string whatFailed)
     {
+        var logger = LoggerFactory.CreateLogger(GetType());
+
+        // Blazor events run on the circuit, outside the HTTP request and its user scope
+        // (LoggingSetup.UseUserLogScope): give every log written by the action the page and user.
+        var user = (await AuthenticationStateProvider.GetAuthenticationStateAsync()).User;
+        var fields = LoggingSetup.UserFields(user);
+        fields.Add(new("Page", GetType().Name));
+        using var _ = logger.BeginScope(new LogScope(fields));
+
         try
         {
             await action();
@@ -24,8 +36,7 @@ public abstract class AppComponentBase : ComponentBase
         {
             // Logged here, once; the reference shown to the user is in the log line.
             var reference = Guid.NewGuid().ToString("N")[..8];
-            LoggerFactory.CreateLogger(GetType()).LogError(
-                ex, "{WhatFailed} (page {Page}, réf. {Reference})", whatFailed, GetType().Name, reference);
+            logger.LogError(ex, "{WhatFailed} (page {Page}, réf. {Reference})", whatFailed, GetType().Name, reference);
 
             return ex switch
             {

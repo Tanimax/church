@@ -12,7 +12,7 @@ public static class TestAuth
     public const string BootstrapAdminPassword = "dev-only-password";
 
     public static async Task<HttpClient> CreateAuthenticatedClientAsync(
-        CustomWebApplicationFactory factory,
+        WebApplicationFactory<Program> factory,
         string username = BootstrapAdminUsername,
         string password = BootstrapAdminPassword)
     {

@@ -15,6 +15,7 @@ builder.Services.AddRazorComponents()
 builder.Services.ConfigureHttpJsonOptions(options =>
     options.SerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 
+builder.Services.AddAppLogging();
 builder.Services.AddPersistentDataProtection(builder.Configuration);
 builder.Services.AddAppAuthentication();
 builder.Services.AddAppErrorHandling();
@@ -29,9 +30,15 @@ builder.Services.AddInfrastructure(builder.Configuration);
 
 var app = builder.Build();
 
+if (adminPassword == DatabaseSetup.DevelopmentAdminPassword)
+{
+    app.Logger.LogWarning("ADMIN_PASSWORD non défini : le mot de passe de développement est utilisé pour le premier compte admin.");
+}
+
 await app.MigrateAndSeedAsync(adminPassword);
 
 app.UseFlyForwardedHeaders();
+app.UseUserLogScope();
 
 app.UseAppErrorHandling();
 if (!app.Environment.IsDevelopment())

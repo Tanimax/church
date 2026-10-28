@@ -35,3 +35,6 @@ avertissement.
   après des corrections importantes, utiliser `/code-review` dans une session Claude Code.
 - La revue ne remplace pas la CI : la compilation et les tests restent vérifiés par le job
   `test`, et les parcours navigateur par le job `e2e`.
+- Les actions du workflow sont épinglées sur un commit précis (la version est en
+  commentaire). Pour monter de version : `git ls-remote https://github.com/anthropics/claude-code-action refs/tags/v1^{}`
+  donne le commit de la dernière v1.

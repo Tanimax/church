@@ -13,7 +13,8 @@ public static class DependencyInjection
     public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
     {
         services.AddAppDatabase(configuration);
-        services.AddHttpClient<IEmailSender, EmailService>();
+        // HttpClient's default timeout is 100 s: a slow email API would freeze the member form.
+        services.AddHttpClient<IEmailSender, EmailService>(client => client.Timeout = TimeSpan.FromSeconds(10));
         services.AddSingleton<IPasswordHasher, PasswordHasher>();
         services.AddSingleton<IMemberCardRenderer, MemberCardRenderer>();
         return services;

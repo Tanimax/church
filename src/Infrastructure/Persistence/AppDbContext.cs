@@ -1,6 +1,8 @@
 using ChurchAttendance.Application.Abstractions;
+using ChurchAttendance.Application.Errors;
 using ChurchAttendance.Domain;
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
 
 namespace ChurchAttendance.Infrastructure.Persistence;
 
@@ -31,6 +33,32 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         modelBuilder.Entity<User>()
             .HasIndex(u => u.Username)
             .IsUnique();
+    }
+
+    // A unique-constraint violation becomes Application's ConflictException, so use cases can
+    // react to "someone saved the same thing meanwhile" without knowing about PostgreSQL.
+    public override int SaveChanges(bool acceptAllChangesOnSuccess)
+    {
+        try
+        {
+            return base.SaveChanges(acceptAllChangesOnSuccess);
+        }
+        catch (DbUpdateException ex) when (ex.InnerException is PostgresException { SqlState: PostgresErrorCodes.UniqueViolation } pg)
+        {
+            throw new ConflictException(pg.ConstraintName, ex);
+        }
+    }
+
+    public override async Task<int> SaveChangesAsync(bool acceptAllChangesOnSuccess, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            return await base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken);
+        }
+        catch (DbUpdateException ex) when (ex.InnerException is PostgresException { SqlState: PostgresErrorCodes.UniqueViolation } pg)
+        {
+            throw new ConflictException(pg.ConstraintName, ex);
+        }
     }
 }
 

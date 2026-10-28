@@ -1,6 +1,7 @@
 @page "/admin/users"
 @attribute [Authorize]
 @rendermode InteractiveServer
+@inherits AppComponentBase
 @using System.ComponentModel.DataAnnotations
 @inject UserAccountService UserAccountService
 @inject ChurchClock Clock
@@ -118,9 +119,17 @@
     <div class="modal-backdrop fade show"></div>
 }
 
+@if (!string.IsNullOrWhiteSpace(listError))
+{
+    <div class="alert alert-danger">@listError</div>
+}
+
 @if (users is null)
 {
-    <p><em>Chargement...</em></p>
+    @if (listError is null)
+    {
+        <p><em>Chargement...</em></p>
+    }
 }
 else
 {
@@ -190,7 +199,10 @@ else
     private EditUserFormModel editFormModel = new();
     private string? editError;
 
-    protected override async Task OnInitializedAsync() => await LoadUsers();
+    private string? listError;
+
+    protected override async Task OnInitializedAsync() =>
+        listError = await TryRunAsync(LoadUsers, "Impossible de charger les utilisateurs");
 
     private async Task LoadUsers()
     {
@@ -261,8 +273,14 @@ else
             return;
         }
 
-        var result = await UserAccountService.UpdateUserAsync(
-            editingUser.Id, editFormModel.Username, editFormModel.Role, editFormModel.IsActive, editFormModel.Password);
+        var result = UserSaveResult.Saved;
+        editError = await TryRunAsync(async () => result = await UserAccountService.UpdateUserAsync(
+            editingUser.Id, editFormModel.Username, editFormModel.Role, editFormModel.IsActive, editFormModel.Password),
+            "Impossible d'enregistrer l'utilisateur");
+        if (editError is not null)
+        {
+            return;
+        }
         if (result == UserSaveResult.UsernameTaken)
         {
             editError = "Ce nom d'utilisateur existe déjà.";
@@ -271,7 +289,7 @@ else
 
         // Saved, or NotFound (deleted meanwhile): either way close the modal and refresh the list.
         editingUser = null;
-        await LoadUsers();
+        listError = await TryRunAsync(LoadUsers, "Impossible de recharger la liste");
     }
 
     private async Task HandleAddSubmit()
@@ -282,7 +300,14 @@ else
             return;
         }
 
-        var result = await UserAccountService.CreateUserAsync(addFormModel.Username, addFormModel.Password, addFormModel.Role);
+        var result = UserSaveResult.Saved;
+        addError = await TryRunAsync(async () => result = await UserAccountService.CreateUserAsync(
+            addFormModel.Username, addFormModel.Password, addFormModel.Role),
+            "Impossible de créer l'utilisateur");
+        if (addError is not null)
+        {
+            return;
+        }
         if (result == UserSaveResult.UsernameTaken)
         {
             addError = "Ce nom d'utilisateur existe déjà.";
@@ -290,7 +315,7 @@ else
         }
 
         showAddModal = false;
-        await LoadUsers();
+        listError = await TryRunAsync(LoadUsers, "Impossible de recharger la liste");
     }
 
     private class AddUserFormModel

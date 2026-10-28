@@ -1,4 +1,5 @@
 using ChurchAttendance.Application.Abstractions;
+using ChurchAttendance.Application.Errors;
 using ChurchAttendance.Domain;
 using ChurchAttendance.SharedKernel;
 using Microsoft.EntityFrameworkCore;
@@ -56,7 +57,7 @@ public static class CheckInService
             await db.SaveChangesAsync();
             return session;
         }
-        catch (DbUpdateException)
+        catch (ConflictException)
         {
             // Stop tracking the rejected insert, or every later SaveChanges would retry it.
             db.ServiceSessions.Remove(session);
@@ -89,7 +90,7 @@ public static class CheckInService
         {
             await db.SaveChangesAsync();
         }
-        catch (DbUpdateException)
+        catch (ConflictException)
         {
             // Stop tracking the rejected insert, or the Culte auto-record that follows a
             // Sainte Cène scan would retry it in its own SaveChanges and fail too.

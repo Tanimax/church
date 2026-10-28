@@ -26,6 +26,9 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
 
     private readonly string _databaseName = $"test_{Guid.NewGuid():N}";
     private readonly string _connectionString;
+
+    // This test's own database (dropped on Dispose).
+    public string ConnectionString => _connectionString;
     private readonly TimeProvider? _timeProvider;
 
     private static void EnsureContainerStarted()
@@ -85,7 +88,7 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
             services.RemoveAll<IDbContextFactory<AppDbContext>>();
             services.RemoveAll<AppDbContext>();
 
-            services.AddDbContextFactory<AppDbContext>(options => options.UseNpgsql(_connectionString));
+            services.AddDbContextFactory<AppDbContext>(options => DatabaseSetup.ConfigureNpgsql(options, _connectionString));
             services.AddScoped<AppDbContext>(sp =>
                 sp.GetRequiredService<IDbContextFactory<AppDbContext>>().CreateDbContext());
 

@@ -48,4 +48,16 @@ public class UserTests
         user.Activate();
         Assert.True(user.IsActive);
     }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void CreateOrRename_WithoutUsername_BreaksADomainRule(string username)
+    {
+        Assert.Throws<DomainException>(() => User.Create(username, "hash", UserRole.Secretaire, DateTime.UtcNow));
+
+        var user = User.Create("marie", "hash", UserRole.Secretaire, DateTime.UtcNow);
+        Assert.Throws<DomainException>(() => user.Rename(username));
+        Assert.Equal("marie", user.Username);
+    }
 }

@@ -1,7 +1,6 @@
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.DataProtection;
-using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.HttpOverrides;
 
 namespace ChurchAttendance.Startup;
@@ -31,14 +30,8 @@ public static class SecuritySetup
     {
         if (context.Request.Path.StartsWithSegments("/api"))
         {
+            // The API's status code pages then write it as ProblemDetails (ErrorHandlingSetup).
             context.Response.StatusCode = apiStatusCode;
-            // Otherwise UseStatusCodePagesWithReExecute replays the request as /not-found
-            // (a Blazor page that rejects a JSON POST with 400) and the 401 never reaches the client.
-            var statusCodePages = context.HttpContext.Features.Get<IStatusCodePagesFeature>();
-            if (statusCodePages is not null)
-            {
-                statusCodePages.Enabled = false;
-            }
         }
         else
         {

@@ -16,19 +16,35 @@ public class User
     public bool IsActive { get; private set; } = true;
     public DateTime CreatedAt { get; private set; }
 
-    public static User Create(string username, string passwordHash, UserRole role, DateTime createdAtUtc) => new()
+    public static User Create(string username, string passwordHash, UserRole role, DateTime createdAtUtc)
     {
-        Username = NormalizeUsername(username),
-        PasswordHash = passwordHash,
-        Role = role,
-        IsActive = true,
-        CreatedAt = createdAtUtc
-    };
+        if (string.IsNullOrWhiteSpace(username))
+        {
+            throw new DomainException("Le nom d'utilisateur est requis.");
+        }
+
+        return new User
+        {
+            Username = NormalizeUsername(username),
+            PasswordHash = passwordHash,
+            Role = role,
+            IsActive = true,
+            CreatedAt = createdAtUtc
+        };
+    }
 
     // Usernames are compared case-insensitively by storing them trimmed and lowercased.
     public static string NormalizeUsername(string username) => username.Trim().ToLowerInvariant();
 
-    public void Rename(string username) => Username = NormalizeUsername(username);
+    public void Rename(string username)
+    {
+        if (string.IsNullOrWhiteSpace(username))
+        {
+            throw new DomainException("Le nom d'utilisateur est requis.");
+        }
+
+        Username = NormalizeUsername(username);
+    }
 
     public void ChangeRole(UserRole role) => Role = role;
 

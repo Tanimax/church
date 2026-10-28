@@ -1,12 +1,15 @@
 @page "/admin/reports/anniversaires"
 @attribute [Authorize]
 @rendermode InteractiveServer
+@inherits AppComponentBase
 @inject IAppDbContextFactory DbFactory
 @inject ChurchClock Clock
 
 <PageTitle>Rapport d'anniversaires</PageTitle>
 
 <h1>Rapport d'anniversaires</h1>
+
+<ErrorAlert Message="@reportError" />
 
 <div class="mb-3">
     <label class="form-label">Dimanche</label>
@@ -68,7 +71,13 @@ else
         await LoadReport();
     }
 
-    private async Task LoadReport()
+    private string? reportError;
+
+    // Initial load and every filter change: a failure shows a message instead of breaking the page.
+    private async Task LoadReport() =>
+        reportError = await TryRunAsync(LoadReportCore, "Impossible de charger le rapport");
+
+    private async Task LoadReportCore()
     {
         await using var db = await DbFactory.CreateDbContextAsync();
 

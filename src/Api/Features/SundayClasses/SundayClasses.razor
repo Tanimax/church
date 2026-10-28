@@ -1,11 +1,14 @@
 @page "/admin/ecole-dominicale"
 @attribute [Authorize]
 @rendermode InteractiveServer
+@inherits AppComponentBase
 @inject SundayClassService SundayClassService
 
 <PageTitle>École Dominicale</PageTitle>
 
 <h1>École Dominicale</h1>
+
+<ErrorAlert Message="@pageError" />
 
 <AuthorizeView Roles="Admin,EcoleDominicale" Context="addAuthContext">
     <Authorized>
@@ -28,6 +31,7 @@
                     </div>
                     <div class="modal-body">
                         <ValidationSummary />
+                        <ErrorAlert Message="@addError" />
                         <div class="mb-3">
                             <label class="form-label">Nom de la classe</label>
                             <InputText class="form-control" @bind-Value="addFormModel.Name" />
@@ -95,6 +99,7 @@ else
                     <button type="button" class="btn-close" aria-label="Fermer" @onclick="CloseManageModal"></button>
                 </div>
                 <div class="modal-body">
+                    <ErrorAlert Message="@manageError" />
                     <h6>Membres de la classe</h6>
                     @if (!classMembers.Any())
                     {
@@ -190,7 +195,13 @@ else
                 .Take(10)
                 .ToList();
 
-    protected override async Task OnInitializedAsync() => await LoadClasses();
+    // Errors from the class list, the add modal and the manage modal.
+    private string? pageError;
+    private string? addError;
+    private string? manageError;
+
+    protected override async Task OnInitializedAsync() =>
+        pageError = await TryRunAsync(LoadClasses, "Impossible de charger les classes");
 
     private async Task LoadClasses()
     {
@@ -218,6 +229,7 @@ else
         }
 
         addFormModel = new SundayClassFormModel();
+        addError = null;
         showAddModal = true;
     }
 
@@ -231,10 +243,15 @@ else
             return;
         }
 
-        await SundayClassService.CreateClassAsync(addFormModel.Name);
+        addError = await TryRunAsync(() => SundayClassService.CreateClassAsync(addFormModel.Name),
+            "Impossible de créer la classe");
+        if (addError is not null)
+        {
+            return;
+        }
 
         showAddModal = false;
-        await LoadClasses();
+        pageError = await TryRunAsync(LoadClasses, "Impossible de recharger les classes");
     }
 
     private async Task OpenManageModal(SundayClass c)
@@ -248,7 +265,7 @@ else
 
         managingClass = c;
         memberSearchTerm = "";
-        await LoadAllMembers();
+        manageError = await TryRunAsync(LoadAllMembers, "Impossible de charger les membres");
     }
 
     private void CloseManageModal()
@@ -267,20 +284,25 @@ else
         if (managingClass is null) return;
         if (!await CanManageClassesAsync()) return;
 
-        await SundayClassService.AssignMemberAsync(member.Id, managingClass.Id);
-
-        memberSearchTerm = "";
-        await LoadAllMembers();
-        await LoadClasses();
+        var classId = managingClass.Id;
+        manageError = await TryRunAsync(async () =>
+        {
+            await SundayClassService.AssignMemberAsync(member.Id, classId);
+            memberSearchTerm = "";
+            await LoadAllMembers();
+            await LoadClasses();
+        }, $"Impossible d'ajouter {member.FullName} à la classe");
     }
 
     private async Task RemoveMemberFromClass(Member member)
     {
         if (!await CanManageClassesAsync()) return;
 
-        await SundayClassService.AssignMemberAsync(member.Id, null);
-
-        await LoadAllMembers();
-        await LoadClasses();
+        manageError = await TryRunAsync(async () =>
+        {
+            await SundayClassService.AssignMemberAsync(member.Id, null);
+            await LoadAllMembers();
+            await LoadClasses();
+        }, $"Impossible de retirer {member.FullName} de la classe");
     }
 }

@@ -39,7 +39,7 @@ public class MemberServiceTests
     }
 
     [Fact]
-    public async Task UpdateMemberAsync_UpdatesDetails_AndReturnsFalseForUnknownMember()
+    public async Task UpdateMemberAsync_UpdatesDetails_AndReturnsNotFoundForUnknownMember()
     {
         using var factory = new CustomWebApplicationFactory();
         using var scope = factory.Services.CreateScope();
@@ -54,8 +54,8 @@ public class MemberServiceTests
         });
         var unknown = await service.UpdateMemberAsync(999_999, new MemberFormModel { FirstName = "X", LastName = "Y" });
 
-        Assert.True(updated);
-        Assert.False(unknown);
+        Assert.True(updated.IsSuccess);
+        Assert.Equal(MemberErrors.NotFound, unknown.Error);
         var saved = (await service.GetMembersAsync()).Single(m => m.Id == member.Id);
         Assert.Equal("Jean-Marc", saved.FirstName);
         Assert.Equal("514-555-0101", saved.Phone);
@@ -63,15 +63,15 @@ public class MemberServiceTests
     }
 
     [Fact]
-    public async Task ToggleActiveAsync_FlipsStatus_AndReturnsNullForUnknownMember()
+    public async Task ToggleActiveAsync_FlipsStatus_AndReturnsNotFoundForUnknownMember()
     {
         using var factory = new CustomWebApplicationFactory();
         using var scope = factory.Services.CreateScope();
         var service = scope.ServiceProvider.GetRequiredService<MemberService>();
         var member = await service.CreateMemberAsync(new MemberFormModel { FirstName = "Jean", LastName = "Dupont" }, BaseUri);
 
-        Assert.False(await service.ToggleActiveAsync(member.Id));
-        Assert.True(await service.ToggleActiveAsync(member.Id));
-        Assert.Null(await service.ToggleActiveAsync(999_999));
+        Assert.False((await service.ToggleActiveAsync(member.Id)).Value);
+        Assert.True((await service.ToggleActiveAsync(member.Id)).Value);
+        Assert.Equal(MemberErrors.NotFound, (await service.ToggleActiveAsync(999_999)).Error);
     }
 }

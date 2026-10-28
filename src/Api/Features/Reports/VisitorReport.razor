@@ -1,6 +1,7 @@
 @page "/admin/reports/visiteurs"
 @attribute [Authorize]
 @rendermode InteractiveServer
+@inherits AppComponentBase
 @inject IAppDbContextFactory DbFactory
 @inject ChurchClock Clock
 @inject NavigationManager Nav
@@ -8,6 +9,8 @@
 <PageTitle>Rapport Visiteurs</PageTitle>
 
 <h1>Rapport Visiteurs</h1>
+
+<ErrorAlert Message="@reportError" />
 
 <div class="card mb-4" style="max-width:360px;">
     <div class="card-body text-center">
@@ -72,7 +75,13 @@ else
         await LoadReport();
     }
 
-    private async Task LoadReport()
+    private string? reportError;
+
+    // Initial load and every filter change: a failure shows a message instead of breaking the page.
+    private async Task LoadReport() =>
+        reportError = await TryRunAsync(LoadReportCore, "Impossible de charger le rapport");
+
+    private async Task LoadReportCore()
     {
         await using var db = await DbFactory.CreateDbContextAsync();
         visitors = await db.Visitors

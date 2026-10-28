@@ -1,0 +1,9 @@
+@* Shows an error message from AppComponentBase.TryRunAsync or a Result, nothing when there is none. *@
+@if (!string.IsNullOrWhiteSpace(Message))
+{
+    <div class="alert alert-danger" role="alert">@Message</div>
+}
+
+@code {
+    [Parameter] public string? Message { get; set; }
+}

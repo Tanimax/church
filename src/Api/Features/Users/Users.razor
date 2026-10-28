@@ -273,7 +273,7 @@ else
             return;
         }
 
-        var result = UserSaveResult.Saved;
+        Result result = Result.Success();
         editError = await TryRunAsync(async () => result = await UserAccountService.UpdateUserAsync(
             editingUser.Id, editFormModel.Username, editFormModel.Role, editFormModel.IsActive, editFormModel.Password),
             "Impossible d'enregistrer l'utilisateur");
@@ -281,13 +281,13 @@ else
         {
             return;
         }
-        if (result == UserSaveResult.UsernameTaken)
+        if (result.Error == UserErrors.UsernameTaken)
         {
-            editError = "Ce nom d'utilisateur existe déjà.";
+            editError = result.Error.Message;
             return;
         }
 
-        // Saved, or NotFound (deleted meanwhile): either way close the modal and refresh the list.
+        // Saved, or not found (deleted meanwhile): either way close the modal and refresh the list.
         editingUser = null;
         listError = await TryRunAsync(LoadUsers, "Impossible de recharger la liste");
     }
@@ -300,7 +300,7 @@ else
             return;
         }
 
-        var result = UserSaveResult.Saved;
+        Result result = Result.Success();
         addError = await TryRunAsync(async () => result = await UserAccountService.CreateUserAsync(
             addFormModel.Username, addFormModel.Password, addFormModel.Role),
             "Impossible de créer l'utilisateur");
@@ -308,9 +308,9 @@ else
         {
             return;
         }
-        if (result == UserSaveResult.UsernameTaken)
+        if (!result.IsSuccess)
         {
-            addError = "Ce nom d'utilisateur existe déjà.";
+            addError = result.Error.Message;
             return;
         }
 

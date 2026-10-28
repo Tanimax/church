@@ -12,10 +12,15 @@ namespace ChurchAttendance.E2ETests.Infrastructure;
 // bootstrap "admin" account — runs exactly as it would in production, so the fixture itself
 // needs no manual schema/seed logic. Shared for the whole E2E run: tests isolate their own
 // data by using unique names rather than paying for a fresh app+database per test.
+//
+// Without Docker, two optional environment variables replace what it provides:
+//   E2E_DATABASE_URL     connection string of an empty database to use instead of a container;
+//   E2E_CHROMIUM_PATH    a Chromium executable to use instead of `playwright install`'s.
 public sealed class AppFixture : IAsyncLifetime
 {
-    private PostgreSqlContainer _container = null!;
+    private PostgreSqlContainer? _container;
     private Process? _appProcess;
+    private StreamWriter? _appLog;
     private IPlaywright _playwright = null!;
 
     public string BaseUrl { get; private set; } = "";
@@ -23,9 +28,14 @@ public sealed class AppFixture : IAsyncLifetime
 
     public async Task InitializeAsync()
     {
-        _container = new PostgreSqlBuilder("postgres:17-alpine")
-            .Build();
-        await _container.StartAsync();
+        var connectionString = Environment.GetEnvironmentVariable("E2E_DATABASE_URL");
+        if (string.IsNullOrEmpty(connectionString))
+        {
+            _container = new PostgreSqlBuilder("postgres:17-alpine")
+                .Build();
+            await _container.StartAsync();
+            connectionString = _container.GetConnectionString();
+        }
 
         var port = GetFreeTcpPort();
         BaseUrl = $"http://localhost:{port}";
@@ -40,15 +50,36 @@ public sealed class AppFixture : IAsyncLifetime
         };
         psi.Environment["ASPNETCORE_ENVIRONMENT"] = "Development";
         psi.Environment["ASPNETCORE_URLS"] = BaseUrl;
-        psi.Environment["ConnectionStrings__Default"] = _container.GetConnectionString();
+        psi.Environment["ConnectionStrings__Default"] = connectionString;
 
         _appProcess = Process.Start(psi)
             ?? throw new InvalidOperationException("Failed to start the app process.");
 
+        // The app's console output must be read continuously: once the pipe's buffer is full,
+        // the app blocks on its next log line. It goes to e2e-app.log next to the test
+        // assembly (CI keeps it when the tests fail).
+        _appLog = new StreamWriter(Path.Combine(AppContext.BaseDirectory, "e2e-app.log")) { AutoFlush = true };
+        _appProcess.OutputDataReceived += (_, e) =>
+        {
+            if (e.Data is not null)
+            {
+                lock (_appLog)
+                {
+                    _appLog.WriteLine(e.Data);
+                }
+            }
+        };
+        _appProcess.BeginOutputReadLine();
+
         await WaitForHealthyAsync();
 
         _playwright = await Playwright.CreateAsync();
-        Browser = await _playwright.Chromium.LaunchAsync(new BrowserTypeLaunchOptions { Headless = true });
+        var chromiumPath = Environment.GetEnvironmentVariable("E2E_CHROMIUM_PATH");
+        Browser = await _playwright.Chromium.LaunchAsync(new BrowserTypeLaunchOptions
+        {
+            Headless = true,
+            ExecutablePath = string.IsNullOrEmpty(chromiumPath) ? null : chromiumPath,
+        });
     }
 
     // Walks up from the test assembly's output directory to the repo root (marked by the
@@ -135,6 +166,7 @@ public sealed class AppFixture : IAsyncLifetime
             _appProcess.WaitForExit(5000);
         }
         _appProcess?.Dispose();
+        _appLog?.Dispose();
 
         if (_container is not null)
         {

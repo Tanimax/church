@@ -39,8 +39,41 @@ jobs:
       - name: Check the image has time zone data
         run: docker run --rm --entrypoint ls church-attendance:ci /usr/share/zoneinfo/America/Toronto
 
+  # Real browser against the real app (tests/ChurchAttendance.E2ETests): roles, double
+  # submits, searches — what only shows up with a Blazor circuit. Testcontainers starts the
+  # database on the runner's Docker.
+  e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Restore
+        run: dotnet restore ChurchAttendance.sln
+
+      # The fixture starts the app from src/Api/bin/Debug, so the whole solution is built.
+      - name: Build
+        run: dotnet build ChurchAttendance.sln --no-restore
+
+      - name: Install the Playwright browser
+        run: pwsh tests/ChurchAttendance.E2ETests/bin/Debug/net10.0/playwright.ps1 install --with-deps chromium
+
+      - name: End-to-end tests
+        run: dotnet test tests/ChurchAttendance.E2ETests/ChurchAttendance.E2ETests.csproj --no-build
+
+      - name: Keep the app's log
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-app-log
+          path: tests/ChurchAttendance.E2ETests/bin/Debug/net10.0/e2e-app.log
+          if-no-files-found: ignore
+
   deploy-staging:
-    needs: test
+    needs: [test, e2e]
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main'
     steps:

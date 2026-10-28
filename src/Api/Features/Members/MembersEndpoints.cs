@@ -2,6 +2,7 @@ using System.ComponentModel.DataAnnotations;
 using ChurchAttendance.Application.Abstractions;
 using ChurchAttendance.Application.Members;
 using ChurchAttendance.Application.Reports;
+using ChurchAttendance.Startup;
 using Microsoft.EntityFrameworkCore;
 
 namespace ChurchAttendance.Features.Members;
@@ -38,7 +39,7 @@ public static class MembersEndpoints
             var response = new MemberResponse(member.Id, member.FirstName, member.LastName, member.FullName, member.Phone, member.Token, PublicUrls.Card(baseUrl, member.Token));
 
             return Results.Created($"/api/members/{member.Id}", response);
-        });
+        }).RequireAuthorization(AuthorizationPolicies.ManageMembers); // same roles as "+ Ajouter un membre"
 
         group.MapGet("/{token}/qr.png", async (string token, IAppDbContext db, HttpRequest httpRequest) =>
         {
@@ -56,10 +57,6 @@ public static class MembersEndpoints
         app.MapGet("/admin/members/export.csv", async (string? search, string? baptized, string? active, IAppDbContext db, ChurchClock clock) =>
         {
             var query = db.Members.AsQueryable();
-            if (!string.IsNullOrWhiteSpace(search))
-            {
-                query = query.Where(m => EF.Functions.ILike(m.FirstName + " " + m.LastName, $"%{search}%"));
-            }
 
             // Bound as strings, not bool?: the export link always includes baptized=<value> and
             // active=<value> (even "" when no filter is selected), and ASP.NET Core's automatic
@@ -87,9 +84,13 @@ public static class MembersEndpoints
                 query = query.Where(m => m.IsActive == activeFilter);
             }
 
-            var members = await query
+            // The name search is applied in memory, like on the Membres page, so the export
+            // matches what the page shows (accent-insensitive: "eloise" finds "Éloïse").
+            var members = (await query
                 .OrderBy(m => m.LastName).ThenBy(m => m.FirstName)
-                .ToListAsync();
+                .ToListAsync())
+                .Where(m => TextSearch.Contains(m.FullName, search))
+                .ToList();
 
             var csv = CsvExportService.BuildMembersCsv(members.Select(m =>
                 (m.LastName, m.FirstName, m.Phone, m.BirthdayLabel, m.IsBaptized, m.IsActive)));

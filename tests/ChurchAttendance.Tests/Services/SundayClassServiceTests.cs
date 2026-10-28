@@ -34,6 +34,34 @@ public class SundayClassServiceTests
         Assert.Equal(["Adultes", "Jeunes"], classes.Select(c => c.Name));
     }
 
+    [Theory]
+    [InlineData("Adolescents")]
+    [InlineData(" adolescents ")]
+    [InlineData("ADOLESCENTS")]
+    public async Task CreateClassAsync_SameNameIgnoringCaseAndSpaces_IsRefused(string duplicate)
+    {
+        using var factory = new CustomWebApplicationFactory();
+        var service = CreateService(factory);
+        Assert.True((await service.CreateClassAsync("Adolescents")).IsSuccess);
+
+        var result = await service.CreateClassAsync(duplicate);
+
+        Assert.Equal(SundayClassErrors.NameTaken, result.Error);
+        Assert.Single(await service.GetClassesAsync());
+    }
+
+    [Fact]
+    public async Task CreateClassAsync_SameNameWithoutAccents_IsRefused()
+    {
+        using var factory = new CustomWebApplicationFactory();
+        var service = CreateService(factory);
+        await service.CreateClassAsync("Préados");
+
+        var result = await service.CreateClassAsync("preados");
+
+        Assert.Equal(SundayClassErrors.NameTaken, result.Error);
+    }
+
     [Fact]
     public async Task AssignMemberAsync_MovesMemberBetweenClasses_AndUpdatesCounts()
     {

@@ -105,7 +105,7 @@
         activeMembers is null || searchTerm.Trim().Length < 2
             ? []
             : activeMembers
-                .Where(m => m.FullName.Contains(searchTerm, StringComparison.OrdinalIgnoreCase))
+                .Where(m => TextSearch.Contains(m.FullName, searchTerm))
                 .OrderBy(m => m.LastName).ThenBy(m => m.FirstName);
 
     private List<Member> searchResults => MatchingMembers.Take(MaxResults).ToList();

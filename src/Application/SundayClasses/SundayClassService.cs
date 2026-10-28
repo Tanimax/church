@@ -1,5 +1,7 @@
 using ChurchAttendance.Application.Abstractions;
 using ChurchAttendance.Domain;
+using ChurchAttendance.SharedKernel;
+using ChurchAttendance.SharedKernel.Results;
 using Microsoft.EntityFrameworkCore;
 
 namespace ChurchAttendance.Application.SundayClasses;
@@ -24,15 +26,24 @@ public class SundayClassService(IAppDbContextFactory dbFactory)
             .ToDictionaryAsync(x => x.ClassId, x => x.Count);
     }
 
-    public async Task CreateClassAsync(string name)
+    // Refused when a class already has the same name, ignoring case and accents
+    // ("Adolescents" / "adolescents"): two such classes can't be told apart in the lists.
+    public async Task<Result> CreateClassAsync(string name)
     {
         await using var db = await dbFactory.CreateDbContextAsync();
+        var existingNames = await db.SundayClasses.Select(c => c.Name).ToListAsync();
+        if (existingNames.Any(existing => TextSearch.SameText(existing, name)))
+        {
+            return SundayClassErrors.NameTaken;
+        }
+
         db.SundayClasses.Add(new SundayClass
         {
             Name = name.Trim(),
             CreatedAt = DateTime.UtcNow
         });
         await db.SaveChangesAsync();
+        return Result.Success();
     }
 
     public async Task<List<Member>> GetAllMembersAsync()

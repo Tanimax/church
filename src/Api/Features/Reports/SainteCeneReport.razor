@@ -112,7 +112,7 @@ else
             ? []
             : string.IsNullOrWhiteSpace(searchTerm)
                 ? rows
-                : rows.Where(r => r.FullName.Contains(searchTerm, StringComparison.OrdinalIgnoreCase)).ToList();
+                : rows.Where(r => TextSearch.Contains(r.FullName, searchTerm)).ToList();
 
     private int totalPages => Math.Max(1, (int)Math.Ceiling(filteredRows.Count / (double)pageSize));
 

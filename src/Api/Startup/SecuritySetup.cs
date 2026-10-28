@@ -1,9 +1,19 @@
+using ChurchAttendance.Domain;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.HttpOverrides;
 
 namespace ChurchAttendance.Startup;
+
+// Named policies for endpoints. Pages check the same roles with AuthorizeView Roles="..."
+// for the buttons, and again in the handlers (a hidden button can still be clicked by a
+// crafted Blazor event).
+public static class AuthorizationPolicies
+{
+    // Create, edit, activate or deactivate members: Admin and École du dimanche, not Secrétaire.
+    public const string ManageMembers = "ManageMembers";
+}
 
 public static class SecuritySetup
 {
@@ -22,7 +32,9 @@ public static class SecuritySetup
                 options.Events.OnRedirectToLogin = context => RedirectOrStatus(context, StatusCodes.Status401Unauthorized);
                 options.Events.OnRedirectToAccessDenied = context => RedirectOrStatus(context, StatusCodes.Status403Forbidden);
             });
-        services.AddAuthorization();
+        services.AddAuthorization(options =>
+            options.AddPolicy(AuthorizationPolicies.ManageMembers,
+                policy => policy.RequireRole(nameof(UserRole.Admin), nameof(UserRole.EcoleDominicale))));
         return services;
     }
 

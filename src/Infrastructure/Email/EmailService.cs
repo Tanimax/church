@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
 using ChurchAttendance.Application.Abstractions;
+using ChurchAttendance.SharedKernel.Logging;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 
@@ -14,7 +15,7 @@ public class EmailService(HttpClient httpClient, IConfiguration config, ILogger<
         var apiKey = config["ResendApiKey"];
         if (string.IsNullOrEmpty(apiKey))
         {
-            logger.LogWarning("ResendApiKey non configuré — courriel de bienvenue non envoyé à {Email}.", toEmail);
+            logger.LogWarning("ResendApiKey non configuré — courriel de bienvenue non envoyé à {Email}.", LogRedaction.MaskEmail(toEmail));
             return;
         }
 
@@ -56,13 +57,14 @@ public class EmailService(HttpClient httpClient, IConfiguration config, ILogger<
             if (!response.IsSuccessStatusCode)
             {
                 var body = await response.Content.ReadAsStringAsync();
-                logger.LogWarning("Échec de l'envoi du courriel à {Email} : {Status} {Body}", toEmail, response.StatusCode, body);
+                logger.LogWarning("Échec de l'envoi du courriel à {Email} : {Status} {Body}",
+                    LogRedaction.MaskEmail(toEmail), response.StatusCode, LogRedaction.MaskEmailsIn(body));
             }
         }
         catch (Exception ex)
         {
             // Best-effort: a failed email must never block member creation.
-            logger.LogWarning(ex, "Erreur lors de l'envoi du courriel de bienvenue à {Email}.", toEmail);
+            logger.LogWarning(ex, "Erreur lors de l'envoi du courriel de bienvenue à {Email}.", LogRedaction.MaskEmail(toEmail));
         }
     }
 }

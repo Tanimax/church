@@ -40,22 +40,26 @@ public static class DatabaseSetup
         options.UseNpgsql(connectionString, npgsql => npgsql.EnableRetryOnFailure(
             maxRetryCount: 3, maxRetryDelay: TimeSpan.FromSeconds(2), errorCodesToAdd: null));
 
+    // Development fallback for the first admin's password.
+    public const string DevelopmentAdminPassword = "dev-only-password";
+
     // Only used to seed the very first "admin" account — after that, credentials
     // live in the Users table and this variable is no longer consulted.
-    public static string ResolveSeedAdminPassword(IConfiguration configuration, IHostEnvironment environment)
+    // IsDevelopmentFallback tells the caller to warn (the logger only exists after Build).
+    public static (string Password, bool IsDevelopmentFallback) ResolveSeedAdminPassword(
+        IConfiguration configuration, IHostEnvironment environment)
     {
         var adminPassword = configuration["AdminPassword"]
             ?? Environment.GetEnvironmentVariable("ADMIN_PASSWORD");
 
         if (!string.IsNullOrEmpty(adminPassword))
         {
-            return adminPassword;
+            return (adminPassword, false);
         }
 
         if (environment.IsDevelopment())
         {
-            Console.WriteLine("ATTENTION: ADMIN_PASSWORD non défini — mot de passe de développement 'dev-only-password' utilisé.");
-            return "dev-only-password";
+            return (DevelopmentAdminPassword, true);
         }
 
         throw new InvalidOperationException("La variable d'environnement ADMIN_PASSWORD doit être définie en production.");

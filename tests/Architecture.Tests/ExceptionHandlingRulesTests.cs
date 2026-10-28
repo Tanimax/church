@@ -20,7 +20,7 @@ public class ExceptionHandlingRulesTests
     [Fact]
     public void CatchAll_OnlyAtTheDocumentedBoundaries()
     {
-        var offenders = SourceFiles()
+        var offenders = SourceCode.Files()
             .Where(f => !CatchAllAllowed.ContainsKey(f.Path))
             .Where(f => CatchAll.IsMatch(f.Text) || BareCatch.IsMatch(f.Text))
             .Select(f => f.Path)
@@ -33,7 +33,7 @@ public class ExceptionHandlingRulesTests
     [Fact]
     public void NoEmptyCatch()
     {
-        var offenders = SourceFiles().Where(f => EmptyCatch.IsMatch(f.Text)).Select(f => f.Path).ToList();
+        var offenders = SourceCode.Files().Where(f => EmptyCatch.IsMatch(f.Text)).Select(f => f.Path).ToList();
 
         Assert.True(offenders.Count == 0, "catch vide : " + string.Join(", ", offenders));
     }
@@ -43,7 +43,7 @@ public class ExceptionHandlingRulesTests
     [Fact]
     public void InteractivePages_InheritAppComponentBase()
     {
-        var offenders = SourceFiles()
+        var offenders = SourceCode.Files()
             .Where(f => f.Path.EndsWith(".razor") && f.Text.Contains("@rendermode InteractiveServer"))
             .Where(f => !f.Text.Contains("@inherits AppComponentBase"))
             .Select(f => f.Path)
@@ -51,25 +51,5 @@ public class ExceptionHandlingRulesTests
 
         Assert.True(offenders.Count == 0,
             "pages interactives qui n'héritent pas d'AppComponentBase : " + string.Join(", ", offenders));
-    }
-
-    private static IEnumerable<(string Path, string Text)> SourceFiles()
-    {
-        var root = RepositoryRoot();
-        return Directory.EnumerateFiles(Path.Combine(root, "src"), "*.*", SearchOption.AllDirectories)
-            .Where(p => p.EndsWith(".cs") || p.EndsWith(".razor"))
-            .Where(p => !p.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}")
-                     && !p.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}"))
-            .Select(p => (Path.GetRelativePath(root, p).Replace('\\', '/'), File.ReadAllText(p)));
-    }
-
-    private static string RepositoryRoot()
-    {
-        var dir = new DirectoryInfo(AppContext.BaseDirectory);
-        while (dir is not null && !dir.GetFiles("*.sln").Any())
-        {
-            dir = dir.Parent;
-        }
-        return dir?.FullName ?? throw new InvalidOperationException("Racine du dépôt introuvable (pas de .sln).");
     }
 }

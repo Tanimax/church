@@ -1,4 +1,5 @@
 using System.Net;
+using ChurchAttendance.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Mvc.Testing;
 
 namespace ChurchAttendance.Tests.Infrastructure;
@@ -9,10 +10,10 @@ public static class TestAuth
     // CustomWebApplicationFactory always uses) when ADMIN_PASSWORD isn't set, and seeds
     // a bootstrap "admin" account with it the first time a fresh database has no users.
     public const string BootstrapAdminUsername = "admin";
-    public const string BootstrapAdminPassword = "dev-only-password";
+    public const string BootstrapAdminPassword = DatabaseSetup.DevelopmentAdminPassword;
 
     public static async Task<HttpClient> CreateAuthenticatedClientAsync(
-        CustomWebApplicationFactory factory,
+        WebApplicationFactory<Program> factory,
         string username = BootstrapAdminUsername,
         string password = BootstrapAdminPassword)
     {

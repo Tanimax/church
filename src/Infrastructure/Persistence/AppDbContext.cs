@@ -1,5 +1,6 @@
 using ChurchAttendance.Application.Abstractions;
 using ChurchAttendance.Application.Errors;
+using ChurchAttendance.Application.Schedules;
 using ChurchAttendance.Domain;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
@@ -15,6 +16,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<Visitor> Visitors => Set<Visitor>();
     public DbSet<User> Users => Set<User>();
     public DbSet<SundayClass> SundayClasses => Set<SundayClass>();
+    public DbSet<ServiceSchedule> ServiceSchedules => Set<ServiceSchedule>();
+    public DbSet<ScheduledService> ScheduledServices => Set<ScheduledService>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -33,6 +36,19 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         modelBuilder.Entity<User>()
             .HasIndex(u => u.Username)
             .IsUnique();
+
+        modelBuilder.Entity<ServiceSchedule>(schedule =>
+        {
+            schedule.HasIndex(s => new { s.Year, s.Quarter }).IsUnique();
+            schedule.Property(s => s.FooterNote).HasMaxLength(ScheduleService.MaxFooterLength);
+            schedule.HasMany(s => s.Services).WithOne().HasForeignKey(s => s.ServiceScheduleId).OnDelete(DeleteBehavior.Cascade);
+        });
+        modelBuilder.Entity<ScheduledService>(service =>
+        {
+            service.HasIndex(s => new { s.ServiceScheduleId, s.Date }).IsUnique();
+            service.Property(s => s.Leader).HasMaxLength(ScheduleService.MaxNameLength);
+            service.Property(s => s.Preacher).HasMaxLength(ScheduleService.MaxNameLength);
+        });
     }
 
     // A unique-constraint violation becomes Application's ConflictException, so use cases can

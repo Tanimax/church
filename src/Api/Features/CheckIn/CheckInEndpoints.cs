@@ -20,6 +20,6 @@ public static class CheckInEndpoints
 
             var response = await CheckInService.CheckInMemberAsync(db, clock, member, request.Type);
             return Results.Ok(response);
-        });
+        }).RequireAuthorization(); // Only logged-in scanners: a card token is in its public /card URL.
     }
 }

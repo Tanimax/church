@@ -1,5 +1,7 @@
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.HttpOverrides;
 
 namespace ChurchAttendance.Startup;
@@ -15,9 +17,34 @@ public static class SecuritySetup
                 options.LoginPath = "/admin/login";
                 options.AccessDeniedPath = "/admin/login";
                 options.Cookie.Name = "ChurchAttendance.Admin";
+
+                // JSON API calls (the scanner's fetch) get a status code they can act on
+                // instead of a redirect to the HTML login page.
+                options.Events.OnRedirectToLogin = context => RedirectOrStatus(context, StatusCodes.Status401Unauthorized);
+                options.Events.OnRedirectToAccessDenied = context => RedirectOrStatus(context, StatusCodes.Status403Forbidden);
             });
         services.AddAuthorization();
         return services;
+    }
+
+    private static Task RedirectOrStatus(RedirectContext<CookieAuthenticationOptions> context, int apiStatusCode)
+    {
+        if (context.Request.Path.StartsWithSegments("/api"))
+        {
+            context.Response.StatusCode = apiStatusCode;
+            // Otherwise UseStatusCodePagesWithReExecute replays the request as /not-found
+            // (a Blazor page that rejects a JSON POST with 400) and the 401 never reaches the client.
+            var statusCodePages = context.HttpContext.Features.Get<IStatusCodePagesFeature>();
+            if (statusCodePages is not null)
+            {
+                statusCodePages.Enabled = false;
+            }
+        }
+        else
+        {
+            context.Response.Redirect(context.RedirectUri);
+        }
+        return Task.CompletedTask;
     }
 
     // By default, ASP.NET Core generates a fresh Data Protection key on every process start

@@ -1,9 +1,11 @@
+using System.Net;
 using System.Net.Http.Json;
 using ChurchAttendance.Infrastructure.Persistence;
 using ChurchAttendance.Application.CheckIn;
 using ChurchAttendance.Features.CheckIn;
 using ChurchAttendance.Tests.Infrastructure;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace ChurchAttendance.Tests.Endpoints;
 
@@ -30,7 +32,7 @@ public class CheckInEndpointsTests
     public async Task CheckIn_UnknownToken_ReturnsNotFoundStatus()
     {
         using var factory = new CustomWebApplicationFactory();
-        var client = factory.CreateClient();
+        var client = await TestAuth.CreateAuthenticatedClientAsync(factory);
 
         var response = await client.PostAsJsonAsync("/api/checkin", new CheckInRequest("does-not-exist"));
         var body = await response.Content.ReadFromJsonAsync<CheckInResponse>();
@@ -47,7 +49,7 @@ public class CheckInEndpointsTests
         {
             await SeedMemberAsync(db, isActive: false);
         }
-        var client = factory.CreateClient();
+        var client = await TestAuth.CreateAuthenticatedClientAsync(factory);
 
         var response = await client.PostAsJsonAsync("/api/checkin", new CheckInRequest("member-token"));
         var body = await response.Content.ReadFromJsonAsync<CheckInResponse>();
@@ -63,7 +65,7 @@ public class CheckInEndpointsTests
         {
             await SeedMemberAsync(db);
         }
-        var client = factory.CreateClient();
+        var client = await TestAuth.CreateAuthenticatedClientAsync(factory);
 
         var response = await client.PostAsJsonAsync("/api/checkin", new CheckInRequest("member-token"));
         var body = await response.Content.ReadFromJsonAsync<CheckInResponse>();
@@ -84,7 +86,7 @@ public class CheckInEndpointsTests
         {
             await SeedMemberAsync(db);
         }
-        var client = factory.CreateClient();
+        var client = await TestAuth.CreateAuthenticatedClientAsync(factory);
 
         await client.PostAsJsonAsync("/api/checkin", new CheckInRequest("member-token"));
         var second = await client.PostAsJsonAsync("/api/checkin", new CheckInRequest("member-token"));
@@ -104,7 +106,7 @@ public class CheckInEndpointsTests
         {
             await SeedMemberAsync(db);
         }
-        var client = factory.CreateClient();
+        var client = await TestAuth.CreateAuthenticatedClientAsync(factory);
 
         using var content = new StringContent(
             """{"token":"member-token","type":"SainteCene"}""",
@@ -129,7 +131,7 @@ public class CheckInEndpointsTests
         {
             await SeedMemberAsync(db, isBaptized: false);
         }
-        var client = factory.CreateClient();
+        var client = await TestAuth.CreateAuthenticatedClientAsync(factory);
 
         using var content = new StringContent(
             """{"token":"member-token","type":"SainteCene"}""",
@@ -152,7 +154,7 @@ public class CheckInEndpointsTests
         {
             await SeedMemberAsync(db, isBaptized: false);
         }
-        var client = factory.CreateClient();
+        var client = await TestAuth.CreateAuthenticatedClientAsync(factory);
 
         var response = await client.PostAsJsonAsync("/api/checkin", new CheckInRequest("member-token"));
         var body = await response.Content.ReadFromJsonAsync<CheckInResponse>();
@@ -168,7 +170,7 @@ public class CheckInEndpointsTests
         {
             await SeedMemberAsync(db, isBaptized: false);
         }
-        var client = factory.CreateClient();
+        var client = await TestAuth.CreateAuthenticatedClientAsync(factory);
 
         using var content = new StringContent(
             """{"token":"member-token","type":"EcoleDominicale"}""",
@@ -230,7 +232,7 @@ public class CheckInEndpointsTests
         {
             await SeedMemberAsync(db);
         }
-        var client = factory.CreateClient();
+        var client = await TestAuth.CreateAuthenticatedClientAsync(factory);
 
         await client.PostAsJsonAsync("/api/checkin", new CheckInRequest("member-token"));
         using var content = new StringContent(
@@ -251,7 +253,7 @@ public class CheckInEndpointsTests
         {
             await SeedMemberAsync(db);
         }
-        var client = factory.CreateClient();
+        var client = await TestAuth.CreateAuthenticatedClientAsync(factory);
 
         var response = await client.PostAsJsonAsync("/api/checkin", new CheckInRequest("member-token"));
         var body = await response.Content.ReadFromJsonAsync<CheckInResponse>();
@@ -260,5 +262,100 @@ public class CheckInEndpointsTests
         await using var verifyDb = factory.CreateDbContext();
         var session = await verifyDb.ServiceSessions.SingleAsync();
         Assert.Equal(new DateOnly(2026, 10, 24), session.Date);
+    }
+
+    [Fact]
+    public async Task CheckIn_NotLoggedIn_IsRejectedWithUnauthorized()
+    {
+        using var factory = new CustomWebApplicationFactory();
+        await using (var db = factory.CreateDbContext())
+        {
+            await SeedMemberAsync(db);
+        }
+        var client = factory.CreateClient();
+
+        var response = await client.PostAsJsonAsync("/api/checkin", new CheckInRequest("member-token", AttendanceType.SainteCene));
+
+        // A JSON API answers 401 rather than redirecting to the HTML login page.
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        await using var verifyDb = factory.CreateDbContext();
+        Assert.Equal(0, await verifyDb.Attendances.CountAsync());
+    }
+
+    [Fact]
+    public async Task CheckIn_FirstScanOfTheDayFromTwoScannersAtOnce_BothSucceedWithOneSession()
+    {
+        using var factory = new CustomWebApplicationFactory();
+        await using (var db = factory.CreateDbContext())
+        {
+            await SeedMemberAsync(db, token: "card-1");
+            await SeedMemberAsync(db, token: "card-2");
+        }
+        var scanner1 = await TestAuth.CreateAuthenticatedClientAsync(factory);
+        var scanner2 = await TestAuth.CreateAuthenticatedClientAsync(factory);
+
+        // Both requests find no session for today and try to create it; the unique index on
+        // the date rejects one of them. Repeated because the race doesn't happen every time.
+        for (var round = 0; round < 20; round++)
+        {
+            await using (var db = factory.CreateDbContext())
+            {
+                await db.Attendances.ExecuteDeleteAsync();
+                await db.ServiceSessions.ExecuteDeleteAsync();
+            }
+
+            var responses = await Task.WhenAll(
+                scanner1.PostAsJsonAsync("/api/checkin", new CheckInRequest("card-1", AttendanceType.SainteCene)),
+                scanner2.PostAsJsonAsync("/api/checkin", new CheckInRequest("card-2", AttendanceType.SainteCene)));
+
+            foreach (var response in responses)
+            {
+                Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+                Assert.Equal("ok", (await response.Content.ReadFromJsonAsync<CheckInResponse>())!.Status);
+            }
+            await using var verifyDb = factory.CreateDbContext();
+            Assert.Equal(1, await verifyDb.ServiceSessions.CountAsync());
+            Assert.Equal(2, await verifyDb.Attendances.CountAsync(a => a.Type == AttendanceType.SainteCene));
+            Assert.Equal(2, await verifyDb.Attendances.CountAsync(a => a.Type == AttendanceType.Culte));
+        }
+    }
+
+    [Fact]
+    public async Task CheckIn_SameCardFromTwoScannersAtOnce_OneOkOneDuplicate_AndCulteStillRecorded()
+    {
+        using var factory = new CustomWebApplicationFactory();
+        await using (var db = factory.CreateDbContext())
+        {
+            await SeedMemberAsync(db);
+            // Today's session already exists, so only the attendance insert races here.
+            var today = factory.Services.GetRequiredService<ChurchClock>().Today;
+            db.ServiceSessions.Add(new ServiceSession { Date = today, Label = "Culte du dimanche" });
+            await db.SaveChangesAsync();
+        }
+        var scanner1 = await TestAuth.CreateAuthenticatedClientAsync(factory);
+        var scanner2 = await TestAuth.CreateAuthenticatedClientAsync(factory);
+
+        for (var round = 0; round < 20; round++)
+        {
+            await using (var db = factory.CreateDbContext())
+            {
+                await db.Attendances.ExecuteDeleteAsync();
+            }
+
+            var responses = await Task.WhenAll(
+                scanner1.PostAsJsonAsync("/api/checkin", new CheckInRequest("member-token", AttendanceType.SainteCene)),
+                scanner2.PostAsJsonAsync("/api/checkin", new CheckInRequest("member-token", AttendanceType.SainteCene)));
+
+            var statuses = new List<string>();
+            foreach (var response in responses)
+            {
+                Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+                statuses.Add((await response.Content.ReadFromJsonAsync<CheckInResponse>())!.Status);
+            }
+            Assert.Equal(["duplicate", "ok"], statuses.Order());
+            await using var verifyDb = factory.CreateDbContext();
+            Assert.Equal(1, await verifyDb.Attendances.CountAsync(a => a.Type == AttendanceType.SainteCene));
+            Assert.Equal(1, await verifyDb.Attendances.CountAsync(a => a.Type == AttendanceType.Culte));
+        }
     }
 }

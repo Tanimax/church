@@ -335,9 +335,13 @@ else
                                         </button>
                                     </Authorized>
                                 </AuthorizeView>
-                                <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="() => ToggleActive(member)">
-                                    @(member.IsActive ? "Désactiver" : "Réactiver")
-                                </button>
+                                <AuthorizeView Roles="Admin,EcoleDominicale" Context="toggleAuthContext">
+                                    <Authorized>
+                                        <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="() => ToggleActive(member)">
+                                            @(member.IsActive ? "Désactiver" : "Réactiver")
+                                        </button>
+                                    </Authorized>
+                                </AuthorizeView>
                             </div>
                         </td>
                     </tr>
@@ -453,7 +457,7 @@ else
         members is null
             ? []
             : members
-                .Where(m => string.IsNullOrWhiteSpace(searchTerm) || m.FullName.Contains(searchTerm, StringComparison.OrdinalIgnoreCase))
+                .Where(m => TextSearch.Contains(m.FullName, searchTerm))
                 .Where(m => baptizedFilter is null || m.IsBaptized == baptizedFilter)
                 .Where(m => activeFilter is null || m.IsActive == activeFilter)
                 .ToList();
@@ -589,6 +593,12 @@ else
 
     private async Task ToggleActive(Member member)
     {
+        // The button is hidden from Secrétaire via AuthorizeView; check again here.
+        if (!await CanManageMembersAsync())
+        {
+            return;
+        }
+
         Result<bool> result = MemberErrors.NotFound;
         pageError = await TryRunAsync(async () => result = await MemberService.ToggleActiveAsync(member.Id),
             $"Impossible de modifier le statut de {member.FullName}");

@@ -191,7 +191,7 @@ else
             ? []
             : allMembers
                 .Where(m => m.IsActive && m.SundayClassId != managingClass.Id)
-                .Where(m => m.FullName.Contains(memberSearchTerm, StringComparison.OrdinalIgnoreCase))
+                .Where(m => TextSearch.Contains(m.FullName, memberSearchTerm))
                 .Take(10)
                 .ToList();
 
@@ -243,10 +243,16 @@ else
             return;
         }
 
-        addError = await TryRunAsync(() => SundayClassService.CreateClassAsync(addFormModel.Name),
+        Result result = Result.Success();
+        addError = await TryRunAsync(async () => result = await SundayClassService.CreateClassAsync(addFormModel.Name),
             "Impossible de créer la classe");
         if (addError is not null)
         {
+            return;
+        }
+        if (!result.IsSuccess)
+        {
+            addError = result.Error!.Message;
             return;
         }
 

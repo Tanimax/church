@@ -17,7 +17,7 @@ public class MembersEndpointsTests
     public async Task CreateMember_ValidRequest_ReturnsCreatedWithTokenAndCardUrl()
     {
         using var factory = new CustomWebApplicationFactory();
-        var client = factory.CreateClient();
+        var client = await TestAuth.CreateAuthenticatedClientAsync(factory);
 
         var response = await client.PostAsJsonAsync("/api/members/", new CreateMemberRequest("Jean", "Dupont", "555-1234"));
         var body = await response.Content.ReadFromJsonAsync<MemberResponse>();
@@ -35,7 +35,7 @@ public class MembersEndpointsTests
     public async Task CreateMember_MissingLastName_ReturnsBadRequest()
     {
         using var factory = new CustomWebApplicationFactory();
-        var client = factory.CreateClient();
+        var client = await TestAuth.CreateAuthenticatedClientAsync(factory);
 
         var response = await client.PostAsJsonAsync("/api/members/", new CreateMemberRequest("Jean", "   ", null));
 
@@ -46,7 +46,7 @@ public class MembersEndpointsTests
     public async Task CreateMember_InvalidPhone_ReturnsBadRequest_SameRulesAsMembresPage()
     {
         using var factory = new CustomWebApplicationFactory();
-        var client = factory.CreateClient();
+        var client = await TestAuth.CreateAuthenticatedClientAsync(factory);
 
         var response = await client.PostAsJsonAsync("/api/members/", new CreateMemberRequest("Jean", "Dupont", "pas-un-numéro"));
 
@@ -57,7 +57,7 @@ public class MembersEndpointsTests
     public async Task CreateMember_TrimsNamesAndStoresBlankPhoneAsNull()
     {
         using var factory = new CustomWebApplicationFactory();
-        var client = factory.CreateClient();
+        var client = await TestAuth.CreateAuthenticatedClientAsync(factory);
 
         var response = await client.PostAsJsonAsync("/api/members/", new CreateMemberRequest("  Jean ", " Dupont ", "   "));
         var body = await response.Content.ReadFromJsonAsync<MemberResponse>();
@@ -67,11 +67,49 @@ public class MembersEndpointsTests
         Assert.Null(body.Phone);
     }
 
+    // Creating a member is limited to the roles that see "+ Ajouter un membre".
+    [Fact]
+    public async Task CreateMember_NotLoggedIn_Is401_AndCreatesNothing()
+    {
+        using var factory = new CustomWebApplicationFactory();
+        var client = factory.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
+
+        var response = await client.PostAsJsonAsync("/api/members/", new CreateMemberRequest("Anonyme", "Pirate", null));
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        await using var db = factory.CreateDbContext();
+        Assert.Empty(db.Members);
+    }
+
+    [Fact]
+    public async Task CreateMember_AsSecretaire_Is403()
+    {
+        using var factory = new CustomWebApplicationFactory();
+        await factory.SeedUserAsync("secretaire1", "motdepasse123", UserRole.Secretaire);
+        var client = await TestAuth.CreateAuthenticatedClientAsync(factory, "secretaire1", "motdepasse123");
+
+        var response = await client.PostAsJsonAsync("/api/members/", new CreateMemberRequest("Jean", "Dupont", null));
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task CreateMember_AsEcoleDominicale_IsAllowed()
+    {
+        using var factory = new CustomWebApplicationFactory();
+        await factory.SeedUserAsync("moniteur1", "motdepasse123", UserRole.EcoleDominicale);
+        var client = await TestAuth.CreateAuthenticatedClientAsync(factory, "moniteur1", "motdepasse123");
+
+        var response = await client.PostAsJsonAsync("/api/members/", new CreateMemberRequest("Jean", "Dupont", null));
+
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+    }
+
     [Fact]
     public async Task GetQrPng_ValidToken_ReturnsPngImage()
     {
         using var factory = new CustomWebApplicationFactory();
-        var client = factory.CreateClient();
+        var client = await TestAuth.CreateAuthenticatedClientAsync(factory);
 
         var created = await client.PostAsJsonAsync("/api/members/", new CreateMemberRequest("Jean", "Dupont", null));
         var member = await created.Content.ReadFromJsonAsync<MemberResponse>();
@@ -190,6 +228,25 @@ public class MembersEndpointsTests
         var csv = await response.Content.ReadAsStringAsync();
 
         Assert.Contains("Martin,Alice", csv);
+        Assert.DoesNotContain("Nadeau,Bob", csv);
+    }
+
+    [Fact]
+    public async Task ExportCsv_SearchFilter_IgnoresAccents_LikeTheMembresPage()
+    {
+        using var factory = new CustomWebApplicationFactory();
+        await using (var db = factory.CreateDbContext())
+        {
+            db.Members.AddRange(
+                new Member { FirstName = "Éloïse", LastName = "Gagné", Token = "eloise-token", CreatedAt = DateTime.UtcNow },
+                new Member { FirstName = "Bob", LastName = "Nadeau", Token = "bob-token", CreatedAt = DateTime.UtcNow });
+            await db.SaveChangesAsync();
+        }
+        var client = await TestAuth.CreateAuthenticatedClientAsync(factory);
+
+        var csv = await client.GetStringAsync("/admin/members/export.csv?search=eloise%20gagne");
+
+        Assert.Contains("Gagné,Éloïse", csv);
         Assert.DoesNotContain("Nadeau,Bob", csv);
     }
 

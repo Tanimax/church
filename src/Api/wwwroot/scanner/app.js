@@ -135,6 +135,11 @@ async function onScanSuccess(decodedText) {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ token, type: currentMode })
         });
+        if (response.status === 401) {
+            // Session expired: log in again, then come back to the scanner.
+            window.location.href = '/admin/login?returnUrl=%2Fscanner';
+            return;
+        }
         const data = await response.json();
         showResult(data.status, data.fullName);
     } catch {

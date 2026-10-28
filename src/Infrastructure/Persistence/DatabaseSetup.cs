@@ -1,3 +1,4 @@
+using System.Data.Common;
 using ChurchAttendance.Application.Abstractions;
 using ChurchAttendance.Application.Users;
 using Microsoft.EntityFrameworkCore;
@@ -12,8 +13,8 @@ public static class DatabaseSetup
 {
     public static IServiceCollection AddAppDatabase(this IServiceCollection services, IConfiguration configuration)
     {
-        var connectionString = BuildPostgresConnectionString(
-            configuration, Environment.GetEnvironmentVariable("DATABASE_URL"));
+        var connectionString = WithDefaultPoolLimit(BuildPostgresConnectionString(
+            configuration, Environment.GetEnvironmentVariable("DATABASE_URL")));
 
         // IDbContextFactory is used by Blazor Server components, which run on a long-lived circuit
         // and must create a short-lived context per operation instead of sharing one scoped instance.
@@ -59,6 +60,28 @@ public static class DatabaseSetup
         db.Database.Migrate();
 
         await scope.ServiceProvider.GetRequiredService<UserAccountService>().SeedAdminIfNoUsersAsync(adminPassword);
+    }
+
+    // Npgsql's default pool allows 100 connections, which is also Postgres's default
+    // max_connections for the whole server (shared here with the staging database): a burst
+    // of requests could take every connection the server has. In a load test, 200
+    // simultaneous check-ins on one CPU were answered faster with 20 connections (~0.7 s)
+    // than with 100 (~1.7 s), so cap the pool at 20 unless the connection string sets its own.
+    public const int DefaultMaxPoolSize = 20;
+
+    public static string WithDefaultPoolLimit(string connectionString)
+    {
+        // NpgsqlConnectionStringBuilder reports every setting as present (with its default),
+        // so look at the keys actually written in the string. Npgsql accepts both spellings.
+        var writtenKeys = new DbConnectionStringBuilder { ConnectionString = connectionString }.Keys
+            .Cast<string>()
+            .Select(k => k.Replace(" ", "").ToLowerInvariant());
+        if (writtenKeys.Any(k => k is "maximumpoolsize" or "maxpoolsize"))
+        {
+            return connectionString;
+        }
+
+        return new NpgsqlConnectionStringBuilder(connectionString) { MaxPoolSize = DefaultMaxPoolSize }.ConnectionString;
     }
 
     // Fly Postgres (managed or unmanaged) exposes DATABASE_URL as a libpq-style URI

@@ -16,15 +16,7 @@ public static class CheckInService
             return new CheckInResponse("not_baptized", member.FullName, null);
         }
 
-        // The church's local date, not the server's (UTC on Fly).
-        var today = clock.Today;
-        var session = await db.ServiceSessions.FirstOrDefaultAsync(s => s.Date == today);
-        if (session is null)
-        {
-            session = new ServiceSession { Date = today, Label = "Culte du dimanche" };
-            db.ServiceSessions.Add(session);
-            await db.SaveChangesAsync();
-        }
+        var session = await GetOrCreateTodaysSessionAsync(db, clock);
 
         var response = await RecordAttendance(db, clock, member, session, type);
 
@@ -41,6 +33,35 @@ public static class CheckInService
         }
 
         return response;
+    }
+
+    // The first scan of the day creates the service session. Two scanners often send that
+    // first scan at the same moment (typically right after Fly wakes the app up), and the
+    // unique index on Date then rejects the second insert: in that case the other request
+    // won the race, so use the session it created.
+    private static async Task<ServiceSession> GetOrCreateTodaysSessionAsync(IAppDbContext db, ChurchClock clock)
+    {
+        // The church's local date, not the server's (UTC on Fly).
+        var today = clock.Today;
+        var session = await db.ServiceSessions.FirstOrDefaultAsync(s => s.Date == today);
+        if (session is not null)
+        {
+            return session;
+        }
+
+        session = new ServiceSession { Date = today, Label = "Culte du dimanche" };
+        db.ServiceSessions.Add(session);
+        try
+        {
+            await db.SaveChangesAsync();
+            return session;
+        }
+        catch (DbUpdateException)
+        {
+            // Stop tracking the rejected insert, or every later SaveChanges would retry it.
+            db.ServiceSessions.Remove(session);
+            return await db.ServiceSessions.FirstAsync(s => s.Date == today);
+        }
     }
 
     private static async Task<CheckInResponse> RecordAttendance(
@@ -70,6 +91,9 @@ public static class CheckInService
         }
         catch (DbUpdateException)
         {
+            // Stop tracking the rejected insert, or the Culte auto-record that follows a
+            // Sainte Cène scan would retry it in its own SaveChanges and fail too.
+            db.Attendances.Remove(attendance);
             var raced = await db.Attendances
                 .FirstOrDefaultAsync(a => a.MemberId == member.Id && a.ServiceSessionId == session.Id && a.Type == type);
             return new CheckInResponse("duplicate", member.FullName, raced?.CheckedInAt);

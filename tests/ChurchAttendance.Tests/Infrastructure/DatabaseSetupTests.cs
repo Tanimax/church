@@ -55,4 +55,24 @@ public class DatabaseSetupTests
         Assert.Equal("localhost", result.Host);
         Assert.Equal("churchattendance", result.Database);
     }
+
+    [Fact]
+    public void WithDefaultPoolLimit_CapsThePoolWhenNotSet()
+    {
+        var result = new NpgsqlConnectionStringBuilder(DatabaseSetup.WithDefaultPoolLimit("Host=h;Database=d"));
+
+        Assert.Equal(DatabaseSetup.DefaultMaxPoolSize, result.MaxPoolSize);
+        Assert.Equal("h", result.Host);
+    }
+
+    [Theory]
+    [InlineData("Host=h;Maximum Pool Size=50")]
+    [InlineData("Host=h;MaxPoolSize=50")]
+    [InlineData("Host=h;maximum pool size=50")]
+    public void WithDefaultPoolLimit_KeepsAnExplicitLimit(string connectionString)
+    {
+        var result = new NpgsqlConnectionStringBuilder(DatabaseSetup.WithDefaultPoolLimit(connectionString));
+
+        Assert.Equal(50, result.MaxPoolSize);
+    }
 }

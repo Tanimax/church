@@ -18,7 +18,7 @@ public static class DatabaseSetup
 
         // IDbContextFactory is used by Blazor Server components, which run on a long-lived circuit
         // and must create a short-lived context per operation instead of sharing one scoped instance.
-        services.AddDbContextFactory<AppDbContext>(options => options.UseNpgsql(connectionString));
+        services.AddDbContextFactory<AppDbContext>(options => ConfigureNpgsql(options, connectionString));
 
         // Minimal API endpoints inject AppDbContext directly (scoped, one instance per HTTP request),
         // derived from the same factory so there's a single DbContextOptions registration.
@@ -31,6 +31,14 @@ public static class DatabaseSetup
 
         return services;
     }
+
+    // Transient failures (the database restarting, a dropped connection, Fly waking a stopped
+    // machine) are retried a few times before the error reaches the user. No code opens an
+    // explicit transaction, which this retrying strategy would require to be wrapped in
+    // Database.CreateExecutionStrategy().ExecuteAsync.
+    public static void ConfigureNpgsql(DbContextOptionsBuilder options, string connectionString) =>
+        options.UseNpgsql(connectionString, npgsql => npgsql.EnableRetryOnFailure(
+            maxRetryCount: 3, maxRetryDelay: TimeSpan.FromSeconds(2), errorCodesToAdd: null));
 
     // Only used to seed the very first "admin" account — after that, credentials
     // live in the Users table and this variable is no longer consulted.

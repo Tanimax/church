@@ -43,7 +43,7 @@ else
                 @(savingTheme ? "Enregistrement..." : "Enregistrer le thème")
             </button>
         </div>
-        <div class="form-text">En tête des diapositives des annonces de l'église.</div>
+        <div class="form-text">Sur la page de titre du PowerPoint des annonces, sous la date.</div>
         <ErrorAlert Message="@themeError" />
         @if (themeSaved)
         {
@@ -214,7 +214,7 @@ else
                         <input id="heading" class="form-control" maxlength="@AnnouncementService.MaxHeadingLength"
                                placeholder="Ex. : 2e jeûne annuel" @bind="form.Heading" />
                         <div class="form-text">
-                            Sinon : @(form.Kind == AnnouncementKind.External ? $"« {AnnouncementTexts.ExternalHeading} »" : "le thème du mois").
+                            Sinon : @(form.Kind == AnnouncementKind.External ? $"« {AnnouncementTexts.ExternalHeading} »" : "aucun").
                         </div>
                     </div>
                 </div>

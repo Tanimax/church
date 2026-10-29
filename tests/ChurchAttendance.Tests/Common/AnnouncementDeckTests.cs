@@ -38,6 +38,15 @@ public class AnnouncementDeckTests
     }
 
     [Fact]
+    public void MonthsTheme_IsForTheTitleSlide_NotRepeatedOverTheAnnouncements()
+    {
+        var deck = Build(Recurring("Réunion de prière"), Recurring("Répétition de la chorale"));
+
+        Assert.Equal(Theme, deck.MonthlyTheme);
+        Assert.All(deck.Slides, s => Assert.Null(s.Heading));
+    }
+
+    [Fact]
     public void Announcement_WithoutWhen_OpensWithItsTitle()
     {
         var sick = new Announcement { Kind = AnnouncementKind.Pastoral, Title = "Les gens malades…" };
@@ -51,7 +60,7 @@ public class AnnouncementDeckTests
         var deck = Build(Recurring("Réunion de prière"), Recurring("Répétition de la chorale"),
             new Announcement { Kind = AnnouncementKind.External, EventDate = new DateOnly(2026, 11, 6), Title = "Réveil des dames" });
 
-        Assert.Equal([Theme, AnnouncementTexts.ExternalHeading], deck.Slides.Select(s => s.Heading));
+        Assert.Equal([null, AnnouncementTexts.ExternalHeading], deck.Slides.Select(s => s.Heading));
         Assert.Equal(4, deck.Slides[0].Paragraphs.Count);
     }
 
@@ -62,7 +71,7 @@ public class AnnouncementDeckTests
         var deck = Build(Enumerable.Range(1, 5).Select(i => Recurring($"Activité {i}")).ToArray());
 
         Assert.Equal(AnnouncementDeck.LinesPerSlide / 2 * 2, deck.Slides[0].Paragraphs.Count);
-        Assert.Equal([Theme, Theme], deck.Slides.Select(s => s.Heading));
+        Assert.Equal([null, null], deck.Slides.Select(s => s.Heading));
         Assert.Equal("Activité 5", deck.Slides[1].Paragraphs[1].Text);
     }
 
@@ -95,7 +104,7 @@ public class AnnouncementDeckTests
 
         var deck = AnnouncementDeck.Build(Sunday, [Recurring("Réunion de prière")], Theme, names);
 
-        Assert.Equal([Theme, AnnouncementDeck.BirthdaysHeading, AnnouncementDeck.BirthdaysHeading], deck.Slides.Select(s => s.Heading));
+        Assert.Equal([null, AnnouncementDeck.BirthdaysHeading, AnnouncementDeck.BirthdaysHeading], deck.Slides.Select(s => s.Heading));
         Assert.Equal(names, deck.Slides.Skip(1).SelectMany(s => s.Paragraphs).Select(p => p.Text));
         Assert.All(deck.Slides.Skip(1).SelectMany(s => s.Paragraphs), p => Assert.Equal(DeckParagraphKind.Name, p.Kind));
         Assert.Equal(AnnouncementDeck.NamesPerSlide, deck.Slides[1].Paragraphs.Count);

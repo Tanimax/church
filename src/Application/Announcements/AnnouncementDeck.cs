@@ -3,8 +3,9 @@ using ChurchAttendance.Domain;
 namespace ChurchAttendance.Application.Announcements;
 
 // What the projected "Les annonces de la semaine" deck shows, already worded and spread over
-// slides: the PowerPoint renderer only lays it out on the church's template.
-public sealed record AnnouncementDeck(DateOnly Sunday, AnnouncementDate Date, IReadOnlyList<DeckSlide> Slides)
+// slides: the PowerPoint renderer only lays it out on the church's template. The month's theme
+// is on the title slide only, not repeated over every announcement.
+public sealed record AnnouncementDeck(DateOnly Sunday, AnnouncementDate Date, string? MonthlyTheme, IReadOnlyList<DeckSlide> Slides)
 {
     public const string Title = "LES ANNONCES DE LA SEMAINE";
     public const string BirthdaysHeading = "LES ANNIVERSAIRES DE LA SEMAINE";
@@ -36,7 +37,7 @@ public sealed record AnnouncementDeck(DateOnly Sunday, AnnouncementDate Date, IR
 
         foreach (var announcement in announcements)
         {
-            var heading = AnnouncementTexts.Heading(announcement, monthlyTheme);
+            var heading = AnnouncementTexts.Heading(announcement);
             var paragraphs = Paragraphs(announcement);
             var lines = paragraphs.Sum(Lines);
 
@@ -62,7 +63,7 @@ public sealed record AnnouncementDeck(DateOnly Sunday, AnnouncementDate Date, IR
             slides.Add(new DeckSlide(BirthdaysHeading, names.Select(n => new DeckParagraph(DeckParagraphKind.Name, null, n)).ToList()));
         }
 
-        return new AnnouncementDeck(sunday, AnnouncementDate.Of(sunday), slides);
+        return new AnnouncementDeck(sunday, AnnouncementDate.Of(sunday), monthlyTheme, slides);
     }
 
     private static List<DeckParagraph> Paragraphs(Announcement announcement)
@@ -103,7 +104,7 @@ public sealed record AnnouncementDate(string Day, string DaySuffix, string Rest)
     public override string ToString() => $"{Day}{DaySuffix}{Rest}";
 }
 
-// One slide: its heading (the month's theme, its own, "Annonce externe"...) and its lines.
+// One slide: its heading (the announcement's own, "Annonce externe", none...) and its lines.
 public sealed record DeckSlide(string? Heading, IReadOnlyList<DeckParagraph> Paragraphs);
 
 public enum DeckParagraphKind

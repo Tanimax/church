@@ -211,7 +211,8 @@ public class AnnouncementServiceTests
         var deck = await service.GetDeckAsync(new DateOnly(2026, 11, 1));
 
         Assert.Equal("Dimanche 1er novembre 2026", deck.Date.ToString());
-        Assert.Equal(["Novembre : Mois de la famille", AnnouncementDeck.BirthdaysHeading], deck.Slides.Select(s => s.Heading));
+        Assert.Equal("Novembre : Mois de la famille", deck.MonthlyTheme);
+        Assert.Equal([null, AnnouncementDeck.BirthdaysHeading], deck.Slides.Select(s => s.Heading));
         Assert.Equal("Réunion de prière", deck.Slides[0].Paragraphs[1].Text);
         Assert.Equal(["Kyan Mybensly Paul", "Claudette Silyon"], deck.Slides[1].Paragraphs.Select(p => p.Text));
     }

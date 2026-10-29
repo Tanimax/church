@@ -43,13 +43,14 @@ public class AnnouncementTextsTests
     }
 
     [Theory]
-    [InlineData(AnnouncementKind.Event, null, "Octobre : Mois d'actions de grâces")]
+    [InlineData(AnnouncementKind.Event, null, null)]
+    [InlineData(AnnouncementKind.Recurring, null, null)]
     [InlineData(AnnouncementKind.Event, "2e jeûne annuel", "2e jeûne annuel")]
     [InlineData(AnnouncementKind.External, null, "Annonce externe")]
     [InlineData(AnnouncementKind.External, "Réveil des dames", "Réveil des dames")]
-    public void Heading_IsItsOwn_ElseAnnonceExterne_ElseTheMonthsTheme(AnnouncementKind kind, string? heading, string expected)
+    public void Heading_IsItsOwn_ElseAnnonceExterne_ElseNone(AnnouncementKind kind, string? heading, string? expected)
     {
-        Assert.Equal(expected, AnnouncementTexts.Heading(Make(kind, heading: heading), "Octobre : Mois d'actions de grâces"));
+        Assert.Equal(expected, AnnouncementTexts.Heading(Make(kind, heading: heading)));
     }
 
     [Theory]

@@ -15,6 +15,7 @@ public class AnnouncementSlidesRendererTests
     private static readonly AnnouncementDeck Deck = AnnouncementDeck.Build(
         new DateOnly(2026, 11, 1),
         [
+            new Announcement { Kind = AnnouncementKind.Recurring, Schedule = "Vendredi soir de 19h00 à 21h30", Title = "Répétition de la chorale" },
             new Announcement
             {
                 Kind = AnnouncementKind.Event, EventDate = new DateOnly(2026, 12, 5), EventTime = "de 8h30 à 14h00",
@@ -46,12 +47,12 @@ public class AnnouncementSlidesRendererTests
         Assert.True(errors.Count == 0, string.Join("\n", errors));
         var size = document.PresentationPart!.Presentation.SlideSize!;
         Assert.Equal((9144000, 6858000), (size.Cx!.Value, size.Cy!.Value));
-        // Title slide, the announcement, the birthdays.
-        Assert.Equal(3, document.PresentationPart.SlideParts.Count());
+        // Title slide, the choir, the fast (its own heading), the birthdays.
+        Assert.Equal(4, document.PresentationPart.SlideParts.Count());
     }
 
     [Fact]
-    public void TitleSlide_HasTheBanner_AndTheSundayWithA1erRaised()
+    public void TitleSlide_HasTheBanner_TheSundayWithA1erRaised_AndTheMonthsTheme()
     {
         using var document = PresentationDocument.Open(new MemoryStream(Render()), isEditable: false);
         var slides = SlidesInOrder(document);
@@ -61,14 +62,15 @@ public class AnnouncementSlidesRendererTests
         Assert.Equal("image/jpeg", Assert.Single(title.ImageParts).ContentType);
         Assert.Contains(Runs(title), r => r.Text!.Text == AnnouncementDeck.Title && r.RunProperties!.Underline! == A.TextUnderlineValues.Single);
         Assert.Equal(30000, RunOf(title, "er").RunProperties!.Baseline!.Value);
-        Assert.Equal("Dimanche 1er novembre 2026", string.Concat(title.Slide.Descendants<A.Paragraph>().Last().Descendants<A.Text>().Select(t => t.Text)));
+        Assert.Contains(title.Slide.Descendants<A.Paragraph>(), p => string.Concat(p.Descendants<A.Text>().Select(t => t.Text)) == "Dimanche 1er novembre 2026");
+        Assert.Equal("FF0000", Color(RunOf(title, "Novembre : Mois de la famille")));
     }
 
     [Fact]
     public void AnnouncementSlide_UsesTheChurchsColours()
     {
         using var document = PresentationDocument.Open(new MemoryStream(Render()), isEditable: false);
-        var slide = SlidesInOrder(document)[1];
+        var slide = SlidesInOrder(document)[2];
 
         Assert.Equal(SlideLayoutValues.Object, slide.SlideLayoutPart!.SlideLayout.Type!.Value); // "Titre et contenu"
         var heading = RunOf(slide, "2e jeûne annuel");
@@ -83,10 +85,21 @@ public class AnnouncementSlidesRendererTests
     }
 
     [Fact]
+    public void AnnouncementWithoutHeading_HasNoTitleShape_NorTheMonthsTheme()
+    {
+        using var document = PresentationDocument.Open(new MemoryStream(Render()), isEditable: false);
+        var slide = SlidesInOrder(document)[1];
+
+        Assert.DoesNotContain(slide.Slide.Descendants<PlaceholderShape>(), p => p.Type?.Value == PlaceholderValues.Title);
+        Assert.DoesNotContain(Runs(slide), r => r.Text!.Text.Contains("Novembre"));
+        Assert.Equal("Répétition de la chorale", Runs(slide)[1].Text!.Text);
+    }
+
+    [Fact]
     public void BirthdaySlide_ListsTheNames()
     {
         using var document = PresentationDocument.Open(new MemoryStream(Render()), isEditable: false);
-        var slide = SlidesInOrder(document)[2];
+        var slide = SlidesInOrder(document)[3];
 
         Assert.Equal([AnnouncementDeck.BirthdaysHeading, "Kyan Mybensly Paul", "Claudette Silyon"], Runs(slide).Select(r => r.Text!.Text));
     }

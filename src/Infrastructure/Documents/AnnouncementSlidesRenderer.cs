@@ -11,7 +11,8 @@ namespace ChurchAttendance.Infrastructure.Documents;
 // Sunday's announcements as a PowerPoint deck, on the church's own template
 // (Documents/Assets/annonces-modele.pptx: the secretariat's deck with its slides removed, so
 // its 4:3 size, Calibri theme and layouts stay). Like their slides: a title slide with the
-// banner, then "title and content" slides in 36-point bold, the heading red and underlined,
+// banner, the date and the month's theme, then "title and content" slides in 36-point bold,
+// the heading (when the announcement has one) red and underlined,
 // what happens in red, detail labels underlined and their text blue, N.B. in blue italic.
 internal sealed class AnnouncementSlidesRenderer(IWebHostEnvironment env) : IAnnouncementSlidesRenderer
 {
@@ -20,6 +21,7 @@ internal sealed class AnnouncementSlidesRenderer(IWebHostEnvironment env) : IAnn
     private const string Blue = "00B0F0";
     private const int TextSize = 3600; // hundredths of a point
     private const int NameSize = 4000;
+    private const int ThemeSize = 3200;
 
     // The banner sits where the template's own one did, across the top of the title slide.
     private const long BannerLeft = 611560;
@@ -50,7 +52,7 @@ internal sealed class AnnouncementSlidesRenderer(IWebHostEnvironment env) : IAnn
                 RelationshipId = presentationPart.GetIdOfPart(slidePart),
             });
 
-            Add(TitleSlide(presentationPart, titleLayout, deck.Date));
+            Add(TitleSlide(presentationPart, titleLayout, deck.Date, deck.MonthlyTheme));
             foreach (var slide in deck.Slides)
             {
                 Add(ContentSlide(presentationPart, contentLayout, slide));
@@ -60,7 +62,7 @@ internal sealed class AnnouncementSlidesRenderer(IWebHostEnvironment env) : IAnn
         return stream.ToArray();
     }
 
-    private SlidePart TitleSlide(PresentationPart presentation, SlideLayoutPart layout, AnnouncementDate date)
+    private SlidePart TitleSlide(PresentationPart presentation, SlideLayoutPart layout, AnnouncementDate date, string? theme)
     {
         var slidePart = NewSlide(presentation, layout);
         var tree = slidePart.Slide.CommonSlideData!.ShapeTree!;
@@ -73,7 +75,13 @@ internal sealed class AnnouncementSlidesRenderer(IWebHostEnvironment env) : IAnn
             dateParagraph.Append(Run(date.DaySuffix, italic: true, schemeText: true, raised: true));
         }
         dateParagraph.Append(Run(date.Rest, italic: true, schemeText: true));
-        tree.Append(Placeholder(3, "Date", new PlaceholderShape { Type = PlaceholderValues.SubTitle, Index = 1 }, dateParagraph));
+        var subtitle = new List<A.Paragraph> { dateParagraph };
+        if (theme is not null)
+        {
+            // Said once here, under the date, rather than over every announcement.
+            subtitle.Add(new A.Paragraph(Run(theme, italic: true, underline: true, color: Red, size: ThemeSize)));
+        }
+        tree.Append(Placeholder(3, "Date", new PlaceholderShape { Type = PlaceholderValues.SubTitle, Index = 1 }, subtitle.ToArray()));
 
         var banner = Branding.ReadBanner(env.WebRootFileProvider);
         var image = slidePart.AddImagePart(ImagePartType.Jpeg);
@@ -100,12 +108,13 @@ internal sealed class AnnouncementSlidesRenderer(IWebHostEnvironment env) : IAnn
         var slidePart = NewSlide(presentation, layout);
         var tree = slidePart.Slide.CommonSlideData!.ShapeTree!;
 
-        var heading = new A.Paragraph();
+        // Most announcements have no heading of their own: no title shape at all then, rather
+        // than an empty one PowerPoint shows as "Cliquez pour ajouter un titre" when editing.
         if (slide.Heading is not null)
         {
-            heading.Append(Run(slide.Heading, italic: true, underline: true, color: Red));
+            tree.Append(Placeholder(2, "Titre", new PlaceholderShape { Type = PlaceholderValues.Title },
+                new A.Paragraph(Run(slide.Heading, italic: true, underline: true, color: Red))));
         }
-        tree.Append(Placeholder(2, "Titre", new PlaceholderShape { Type = PlaceholderValues.Title }, heading));
         tree.Append(Placeholder(3, "Annonces", new PlaceholderShape { Index = 1 }, slide.Paragraphs.Select(Paragraph).ToArray()));
         return slidePart;
     }

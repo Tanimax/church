@@ -4,3 +4,6 @@ obj/
 *.db-shm
 *.db-wal
 .vs/
+
+# Coverage reports from `dotnet test --collect` (docs/sonarcloud.md)
+TestResults/

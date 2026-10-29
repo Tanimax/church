@@ -53,3 +53,16 @@
 .detail-label {
     max-width: 9rem;
 }
+
+/* The form's preview: the announcement as its slide will read. */
+.preview {
+    border-top: 1px solid var(--line, #e2ded2);
+    padding-top: 0.75rem;
+}
+
+.preview-heading {
+    color: #d00000;
+    font-style: italic;
+    text-decoration: underline;
+    font-weight: 600;
+}

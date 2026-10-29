@@ -60,49 +60,65 @@ public sealed class AnnoncesPageComponentTests : IDisposable
         var page = Render();
         OpenNew(page);
 
+        page.Find("#title").Change("Conférence du ministère des hommes et celui des dames.");
         page.Find("#eventDate").Change("2026-10-31");
         page.Find("#eventTime").Change("à 18h00");
-        page.Find("#title").Change("Conférence du ministère des hommes et celui des dames.");
-        // Found again after each change: every change re-renders the form.
-        page.Find("input[aria-label='Étiquette']").Change("Sujet");
-        page.Find("input[aria-label='Texte']").Change("L’identité des ouvriers dans l’Église.");
+        page.Find("#details").Change("Sujet : L’identité des ouvriers dans l’Église.\nSoyez des nôtres !");
         Save(page).Click();
 
         page.WaitForAssertion(() => Assert.Empty(page.FindAll(".modal-content")));
         var item = page.Find(".announcement");
         Assert.Equal("Samedi 31 octobre 2026, à 18h00 :", item.QuerySelector(".when")!.TextContent);
-        Assert.Contains("Sujet :", item.QuerySelector(".detail")!.TextContent);
+        Assert.Equal("Sujet :", item.QuerySelector(".detail .label")!.TextContent);
+        Assert.Equal(2, item.QuerySelectorAll(".detail").Length);
         Assert.Contains("1 annonce(s)", page.Markup);
     }
 
     [Fact]
-    public void Recurring_WithoutItsSchedule_IsRefused_AndTheFormStaysOpen()
+    public void Dated_WithoutADate_IsRefused_AndTheFormStaysOpen()
     {
         var page = Render();
         OpenNew(page);
 
-        page.Find("#kind").Change(nameof(AnnouncementKind.Recurring));
-        Assert.Empty(page.FindAll("#eventDate")); // a recurring activity has a schedule, not a date
-        page.Find("#title").Change("Répétition de la chorale");
+        page.Find("#title").Change("Soirée du ministère des dames.");
         Save(page).Click();
 
-        page.WaitForAssertion(() => Assert.Contains(AnnouncementErrors.ScheduleRequired.Message, page.Find(".modal-body").TextContent));
+        page.WaitForAssertion(() => Assert.Contains(AnnouncementErrors.EventDateRequired.Message, page.Find(".modal-body").TextContent));
         Assert.Empty(page.FindAll(".announcement"));
     }
 
     [Fact]
-    public void DetailLines_CanBeAddedAndRemoved()
+    public async Task EveryWeek_ShowsTheScheduleInsteadOfTheDate_AndSavesARecurringActivity()
     {
         var page = Render();
         OpenNew(page);
-        Assert.Single(page.FindAll("button[aria-label='Retirer la ligne']"));
 
-        page.Find("button:contains('+ Ajouter une ligne')").Click();
-        Assert.Equal(2, page.FindAll("button[aria-label='Retirer la ligne']").Count);
+        page.Find("#weekly").Change(true);
+        Assert.Empty(page.FindAll("#eventDate"));
+        page.Find("#schedule").Change("Vendredi soir de 19h00 à 21h30");
+        page.Find("#title").Change("Répétition de la chorale");
+        Save(page).Click();
 
-        page.FindAll("button[aria-label='Retirer la ligne']")[0].Click();
-        page.FindAll("button[aria-label='Retirer la ligne']")[0].Click();
-        Assert.Empty(page.FindAll("button[aria-label='Retirer la ligne']"));
+        page.WaitForAssertion(() => Assert.Empty(page.FindAll(".modal-content")));
+        Assert.Equal(AnnouncementKind.Recurring, Assert.Single(await Service.GetAllAsync(includeArchived: false)).Kind);
+    }
+
+    [Fact]
+    public void Preview_ShowsTheAnnouncementAsItsSlideWillRead()
+    {
+        var page = Render();
+        OpenNew(page);
+
+        page.Find("#title").Change("L'Église Par la foi nous invite au réveil des dames.");
+        page.Find("#eventDate").Change("2026-11-06");
+        page.Find("#endDate").Change("2026-11-08");
+        page.Find("#external").Change(true);
+        page.Find("#details").Change("Sujet : Jean 14 : 1-3");
+
+        var preview = page.Find(".preview");
+        Assert.Equal(AnnouncementTexts.ExternalHeading, preview.QuerySelector(".preview-heading")!.TextContent);
+        Assert.Equal("Du vendredi 6 au dimanche 8 novembre 2026 :", preview.QuerySelector(".when")!.TextContent);
+        Assert.Equal("Sujet :", preview.QuerySelector(".detail .label")!.TextContent);
 
         page.Find(".modal-footer .btn-secondary").Click();
         Assert.Empty(page.FindAll(".modal-content"));

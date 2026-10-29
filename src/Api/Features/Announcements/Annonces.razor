@@ -117,105 +117,111 @@ else
     }
 }
 
-@if (form is not null)
+@if (draft is not null)
 {
     <div class="modal fade show d-block" tabindex="-1" role="dialog" @onclick="CloseForm">
         <div class="modal-dialog modal-lg" role="document" @onclick:stopPropagation="true">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">@(form.Id == 0 ? "Nouvelle annonce" : "Modifier l'annonce")</h5>
+                    <h5 class="modal-title">@(draft.Id == 0 ? "Nouvelle annonce" : "Modifier l'annonce")</h5>
                     <button type="button" class="btn-close" aria-label="Fermer" @onclick="CloseForm"></button>
                 </div>
                 <div class="modal-body">
                     <ErrorAlert Message="@formError" />
 
                     <div class="mb-3">
-                        <label class="form-label" for="kind">Type</label>
-                        <select id="kind" class="form-select" @bind="form.Kind">
-                            @foreach (var kind in Enum.GetValues<AnnouncementKind>())
-                            {
-                                <option value="@kind">@KindOption(kind)</option>
-                            }
-                        </select>
+                        <label class="form-label" for="title">Ce qui a lieu</label>
+                        <input id="title" class="form-control" maxlength="@AnnouncementService.MaxTitleLength"
+                               placeholder="Ex. : Réunion de prière ici à l'église, suivie de l'étude biblique." @bind="draft.Title" />
                     </div>
 
-                    @if (form.Kind == AnnouncementKind.Recurring)
-                    {
-                        <div class="mb-3">
-                            <label class="form-label" for="schedule">Quand</label>
-                            <input id="schedule" class="form-control" maxlength="@AnnouncementService.MaxScheduleLength"
-                                   placeholder="Ex. : Mercredi soir de 19h00 à 21h15" @bind="form.Schedule" />
+                    <fieldset class="mb-3">
+                        <legend class="form-label fs-6 mb-1">Quand ?</legend>
+                        <div class="form-check form-check-inline">
+                            <input id="dated" class="form-check-input" type="radio" name="when" checked="@draft.IsDated"
+                                   @onchange="() => draft.IsDated = true" />
+                            <label class="form-check-label" for="dated">À une date</label>
                         </div>
+                        <div class="form-check form-check-inline">
+                            <input id="weekly" class="form-check-input" type="radio" name="when" checked="@(!draft.IsDated)"
+                                   @onchange="() => draft.IsDated = false" />
+                            <label class="form-check-label" for="weekly">Chaque semaine, ou sans date</label>
+                        </div>
+                    </fieldset>
+
+                    @if (draft.IsDated)
+                    {
+                        <div class="row">
+                            <div class="col-sm-4 mb-3">
+                                <label class="form-label" for="eventDate">Date</label>
+                                <input id="eventDate" type="date" class="form-control" @bind="draft.Date" />
+                            </div>
+                            <div class="col-sm-4 mb-3">
+                                <label class="form-label" for="eventTime">Heure</label>
+                                <input id="eventTime" class="form-control" maxlength="@AnnouncementService.MaxEventTimeLength"
+                                       placeholder="Ex. : à 18h00" @bind="draft.Time" />
+                            </div>
+                            <div class="col-sm-4 mb-3">
+                                <label class="form-label" for="endDate">Jusqu'au (si plusieurs jours)</label>
+                                <input id="endDate" type="date" class="form-control" @bind="draft.EndDate" />
+                            </div>
+                        </div>
+                        <div class="form-text mb-3 mt-n2">L'annonce disparaît d'elle-même une fois la date passée.</div>
                     }
                     else
                     {
-                        <div class="row">
-                            <div class="col-md-4 mb-3">
-                                <label class="form-label" for="eventDate">
-                                    Date @(form.Kind == AnnouncementKind.Event ? "" : "(facultative)")
-                                </label>
-                                <input id="eventDate" type="date" class="form-control" @bind="form.EventDate" />
-                            </div>
-                            <div class="col-md-4 mb-3">
-                                <label class="form-label" for="endDate">Jusqu'au (plusieurs jours)</label>
-                                <input id="endDate" type="date" class="form-control" @bind="form.EndDate" />
-                            </div>
-                            <div class="col-md-4 mb-3">
-                                <label class="form-label" for="eventTime">Heure</label>
-                                <input id="eventTime" class="form-control" maxlength="@AnnouncementService.MaxEventTimeLength"
-                                       placeholder="Ex. : à 18h00" @bind="form.EventTime" />
-                            </div>
+                        <div class="mb-3">
+                            <label class="form-label" for="schedule">Jour et heure (facultatif)</label>
+                            <input id="schedule" class="form-control" maxlength="@AnnouncementService.MaxScheduleLength"
+                                   placeholder="Ex. : Mercredi soir de 19h00 à 21h15" @bind="draft.Schedule" />
+                            <div class="form-text">Vide pour une annonce permanente sans horaire (ex. : les malades).</div>
                         </div>
-                        @if (form.Kind != AnnouncementKind.Event)
-                        {
-                            <div class="mb-3">
-                                <label class="form-label" for="schedule">Quand, sans date précise (facultatif)</label>
-                                <input id="schedule" class="form-control" maxlength="@AnnouncementService.MaxScheduleLength" @bind="form.Schedule" />
-                            </div>
-                        }
-                        <div class="form-text mb-3">L'annonce disparaît d'elle-même une fois sa date passée.</div>
                     }
 
                     <div class="mb-3">
-                        <label class="form-label" for="title">Titre (ce qui a lieu)</label>
-                        <input id="title" class="form-control" maxlength="@AnnouncementService.MaxTitleLength"
-                               placeholder="Ex. : Réunion de prière ici à l'église, suivie de l'étude biblique." @bind="form.Title" />
+                        <label class="form-label" for="details">Détails (facultatif)</label>
+                        <textarea id="details" class="form-control" rows="3" @bind="draft.Details"
+                                  placeholder="Sujet : L'identité des ouvriers dans l'Église.&#10;N.B. : Soyez des nôtres !"></textarea>
+                        <div class="form-text">Une ligne par détail. « Sujet : », « Tél. : », « N.B. : »… sont soulignés sur la diapositive.</div>
                     </div>
 
-                    <datalist id="detail-labels">
-                        <option value="Sujet"></option>
-                        <option value="Tél."></option>
-                        <option value="Prédicateur"></option>
-                        <option value="Horaire"></option>
-                        <option value="N.B."></option>
-                    </datalist>
-                    <fieldset class="mb-3">
-                        <legend class="form-label fs-6">Détails</legend>
-                        @foreach (var detail in form.Details)
+                    <div class="form-check mb-3">
+                        <input id="external" class="form-check-input" type="checkbox" @bind="draft.IsExternal" />
+                        <label class="form-check-label" for="external">Annonce d'une autre église</label>
+                    </div>
+
+                    <details class="mb-3" open="@(!string.IsNullOrWhiteSpace(draft.Heading))">
+                        <summary class="form-text">Plus d'options</summary>
+                        <label class="form-label mt-2" for="heading">Titre de section</label>
+                        <input id="heading" class="form-control" maxlength="@AnnouncementService.MaxHeadingLength"
+                               placeholder="Ex. : 2e jeûne annuel" @bind="draft.Heading" />
+                        <div class="form-text">
+                            En tête de sa diapositive. Sinon : @(draft.IsExternal ? $"« {AnnouncementTexts.ExternalHeading} »" : "aucun").
+                        </div>
+                    </details>
+
+                    @{ var preview = draft.Preview(); }
+                    <div class="preview">
+                        <div class="form-text mb-1">Aperçu</div>
+                        @if (AnnouncementTexts.Heading(preview) is { } heading)
                         {
-                            <div class="d-flex gap-2 mb-2">
-                                <input class="form-control detail-label" list="detail-labels" maxlength="@AnnouncementService.MaxDetailLabelLength"
-                                       aria-label="Étiquette" placeholder="Sujet" @bind="detail.Label" />
-                                <input class="form-control" maxlength="@AnnouncementService.MaxDetailTextLength"
-                                       aria-label="Texte" @bind="detail.Text" />
-                                <button type="button" class="btn btn-outline-secondary" aria-label="Retirer la ligne"
-                                        @onclick="() => form.Details.Remove(detail)">✕</button>
+                            <div class="preview-heading">@heading</div>
+                        }
+                        @if (AnnouncementTexts.WhenLine(preview) is { } when)
+                        {
+                            <div class="when">@when</div>
+                        }
+                        <div class="title">@(string.IsNullOrWhiteSpace(preview.Title) ? "…" : preview.Title)</div>
+                        @foreach (var detail in preview.Details)
+                        {
+                            <div class="detail">
+                                @if (detail.Label is not null)
+                                {
+                                    <span class="label">@detail.Label :</span>@(" ")
+                                }
+                                <span>@detail.Text</span>
                             </div>
                         }
-                        @if (form.Details.Count < AnnouncementService.MaxDetails)
-                        {
-                            <button type="button" class="btn btn-sm btn-outline-secondary"
-                                    @onclick="() => form.Details.Add(new AnnouncementDetailRow())">+ Ajouter une ligne</button>
-                        }
-                    </fieldset>
-
-                    <div class="mb-3">
-                        <label class="form-label" for="heading">Titre de section (facultatif)</label>
-                        <input id="heading" class="form-control" maxlength="@AnnouncementService.MaxHeadingLength"
-                               placeholder="Ex. : 2e jeûne annuel" @bind="form.Heading" />
-                        <div class="form-text">
-                            Sinon : @(form.Kind == AnnouncementKind.External ? $"« {AnnouncementTexts.ExternalHeading} »" : "aucun").
-                        </div>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -238,7 +244,7 @@ else
     private bool showArchived;
     private string? theme;
 
-    private AnnouncementFormModel? form;
+    private AnnouncementDraft? draft;
 
     private string? pageError;
     private string? listError;
@@ -275,33 +281,24 @@ else
 
     private async Task ReloadAsync() => listError = await TryRunAsync(LoadAsync, "Impossible de charger les annonces");
 
-    private static string KindOption(AnnouncementKind kind) => kind switch
-    {
-        AnnouncementKind.Recurring => "Activité de la semaine (chaque semaine)",
-        AnnouncementKind.Event => "Événement (à une date)",
-        AnnouncementKind.Pastoral => "Annonce pastorale (permanente)",
-        AnnouncementKind.External => "Annonce externe (autre église)",
-        _ => kind.ToString(),
-    };
-
     private void OpenNew()
     {
         formError = null;
-        form = new AnnouncementFormModel { Details = [new AnnouncementDetailRow()] };
+        draft = new AnnouncementDraft();
     }
 
     private void OpenEdit(Announcement announcement)
     {
         formError = null;
-        form = AnnouncementFormModel.From(announcement);
+        draft = AnnouncementDraft.From(announcement);
     }
 
-    private void CloseForm() => form = null;
+    private void CloseForm() => draft = null;
 
     private async Task SaveAsync()
     {
         // Set before the first await: Blazor runs the next click's handler as soon as this one awaits.
-        if (saving || form is null)
+        if (saving || draft is null)
         {
             return;
         }
@@ -316,7 +313,7 @@ else
             }
 
             Result<int>? result = null;
-            formError = await TryRunAsync(async () => result = await AnnouncementService.SaveAsync(form),
+            formError = await TryRunAsync(async () => result = await AnnouncementService.SaveAsync(draft.ToForm()),
                 "Impossible d'enregistrer l'annonce");
             if (formError is null && !result!.IsSuccess)
             {
@@ -324,7 +321,7 @@ else
             }
             if (formError is null)
             {
-                form = null;
+                draft = null;
                 await ReloadAsync();
             }
         }

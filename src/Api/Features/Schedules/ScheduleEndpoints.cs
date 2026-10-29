@@ -12,7 +12,13 @@ public static class ScheduleEndpoints
         app.MapGet("/admin/programmation/{year:int:range(2000,2100)}/{quarter:int:range(1,4)}/pdf",
             async (int year, int quarter, ScheduleService schedules, ISchedulePdfRenderer renderer) =>
             {
-                var sheet = ScheduleSheet.From(await schedules.GetAsync(year, quarter));
+                // A quarter never saved has no sheet yet: no blank PDF that could be sent by mistake.
+                var saved = await schedules.GetAsync(year, quarter);
+                if (!saved.Exists)
+                {
+                    return Results.NotFound();
+                }
+                var sheet = ScheduleSheet.From(saved);
                 var fileName = $"Service_dominical_{sheet.Period.Replace("Du ", "du ").Replace(' ', '_')}.pdf";
                 return Results.File(renderer.Render(sheet), "application/pdf", fileName);
             }).RequireAuthorization(AuthorizationPolicies.ManageCommunication);

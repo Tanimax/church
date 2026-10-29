@@ -1,0 +1,85 @@
+name: SonarCloud
+
+# Analyse SonarCloud avec la couverture des tests. L'analyse automatique de SonarCloud ne
+# sait pas lire la couverture d'un projet .NET : cette analyse-ci la remplace. Mise en place
+# (désactiver l'analyse automatique, secret SONAR_TOKEN) : docs/sonarcloud.md.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+# A new push replaces the analysis still running for the same branch or PR.
+concurrency:
+  group: sonar-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  analyse:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      # The secret is only handed to the steps that talk to SonarCloud, never to the job's
+      # env; without it (not set up yet, or a PR from a fork) the job says so and stops.
+      - name: Jeton SonarCloud présent ?
+        id: token
+        env:
+          TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: |
+          if [ -n "$TOKEN" ]; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::warning::Secret SONAR_TOKEN absent — analyse SonarCloud ignorée. Voir docs/sonarcloud.md."
+          fi
+
+      # Actions pinned to a commit (tag in the comment): a moved tag can't change what runs.
+      # Full history: SonarCloud uses git blame to tell new code from old.
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        if: steps.token.outputs.present == 'true'
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4
+        if: steps.token.outputs.present == 'true'
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Installer le scanner SonarCloud
+        if: steps.token.outputs.present == 'true'
+        run: dotnet tool install --global dotnet-sonarscanner --version 11.3.0
+
+      # Migrations are generated code and wwwroot holds third-party libraries: neither is
+      # expected to be covered by our tests.
+      - name: Début de l'analyse
+        if: steps.token.outputs.present == 'true'
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: >
+          dotnet sonarscanner begin
+          /k:"Tanimax_church"
+          /o:"tanimax"
+          /d:sonar.host.url="https://sonarcloud.io"
+          /d:sonar.token="$SONAR_TOKEN"
+          /d:sonar.cs.opencover.reportsPaths="**/TestResults/**/coverage.opencover.xml"
+          /d:sonar.coverage.exclusions="**/Migrations/**,**/wwwroot/**"
+
+      - name: Build
+        if: steps.token.outputs.present == 'true'
+        run: dotnet build ChurchAttendance.sln
+
+      # Coverage comes from the service and endpoint tests (real PostgreSQL through
+      # Testcontainers, on the runner's Docker). The browser tests run the app in another
+      # process, which coverlet can't follow.
+      - name: Tests avec couverture
+        if: steps.token.outputs.present == 'true'
+        run: dotnet test tests/ChurchAttendance.Tests/ChurchAttendance.Tests.csproj --no-build --collect:"XPlat Code Coverage;Format=opencover"
+
+      - name: Fin de l'analyse
+        if: steps.token.outputs.present == 'true'
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: dotnet sonarscanner end /d:sonar.token="$SONAR_TOKEN"

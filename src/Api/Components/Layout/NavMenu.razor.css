@@ -194,8 +194,14 @@
     outline-offset: -2px;
 }
 
+/* An open group's links hang off a thin vertical line, drawn under the centre of the
+   group's icon (1rem padding + half the 1.25rem icon, minus the group's own 1rem padding).
+   Margin + line + padding add up to the 2rem indent the links had before, so the text
+   doesn't move. The items touch each other, so the line runs unbroken. */
 .nav-subitem {
-    padding-left: 2rem;
+    margin-left: 1.625rem;
+    border-left: 1px solid rgba(199, 203, 220, 0.25);
+    padding-left: calc(0.375rem - 1px);
     padding-bottom: 0.15rem;
 }
 

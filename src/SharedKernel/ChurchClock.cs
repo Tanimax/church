@@ -31,6 +31,16 @@ public sealed class ChurchClock(TimeProvider timeProvider, TimeZoneInfo timeZone
         }
     }
 
+    // Today if it's Sunday, otherwise the coming Sunday — the one the announcements are prepared for.
+    public DateOnly UpcomingSunday
+    {
+        get
+        {
+            var today = Today;
+            return today.AddDays((7 - (int)today.DayOfWeek) % 7);
+        }
+    }
+
     // Converts a UTC timestamp (as stored in Postgres timestamptz columns) to the church's
     // local wall-clock time for display or export.
     public DateTime ToLocal(DateTime utc) =>

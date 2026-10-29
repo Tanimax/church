@@ -1,0 +1,55 @@
+/* Each announcement reads as on its slide: the when in bold, what happens in red, the
+   detail labels underlined. */
+.theme-input {
+    max-width: 36rem;
+}
+
+.announcements {
+    display: grid;
+    gap: 0.75rem;
+}
+
+.announcement {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+    border: 1px solid var(--line, #e2ded2);
+    border-radius: 8px;
+    background: var(--surface, #fff);
+}
+
+.announcement-text {
+    min-width: 0;
+    flex: 1 1 20rem;
+}
+
+.announcement-actions {
+    display: flex;
+    gap: 0.5rem;
+    align-items: flex-start;
+}
+
+.when {
+    font-weight: 700;
+}
+
+.title {
+    color: #d00000;
+    font-weight: 600;
+}
+
+.detail .label {
+    text-decoration: underline;
+    font-weight: 600;
+}
+
+/* Past or archived: still listed, but out of Sunday's announcements. */
+.is-off .announcement-text {
+    opacity: 0.6;
+}
+
+.detail-label {
+    max-width: 9rem;
+}

@@ -22,6 +22,56 @@ namespace ChurchAttendance.Infrastructure.Persistence.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("ChurchAttendance.Domain.Announcement", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateOnly?>("EndDate")
+                        .HasColumnType("date");
+
+                    b.Property<DateOnly?>("EventDate")
+                        .HasColumnType("date");
+
+                    b.Property<string>("EventTime")
+                        .HasMaxLength(60)
+                        .HasColumnType("character varying(60)");
+
+                    b.Property<string>("Heading")
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)");
+
+                    b.Property<bool>("IsArchived")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<string>("Schedule")
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Announcements");
+                });
+
             modelBuilder.Entity("ChurchAttendance.Domain.Attendance", b =>
                 {
                     b.Property<int>("Id")
@@ -107,6 +157,33 @@ namespace ChurchAttendance.Infrastructure.Persistence.Migrations
                         .IsUnique();
 
                     b.ToTable("Members");
+                });
+
+            modelBuilder.Entity("ChurchAttendance.Domain.MonthlyTheme", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("Month")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Text")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)");
+
+                    b.Property<int>("Year")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Year", "Month")
+                        .IsUnique();
+
+                    b.ToTable("MonthlyThemes");
                 });
 
             modelBuilder.Entity("ChurchAttendance.Domain.ScheduledService", b =>
@@ -271,6 +348,35 @@ namespace ChurchAttendance.Infrastructure.Persistence.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Visitors");
+                });
+
+            modelBuilder.Entity("ChurchAttendance.Domain.Announcement", b =>
+                {
+                    b.OwnsMany("ChurchAttendance.Domain.AnnouncementDetail", "Details", b1 =>
+                        {
+                            b1.Property<int>("AnnouncementId");
+
+                            b1.Property<int>("__synthesizedOrdinal")
+                                .ValueGeneratedOnAdd();
+
+                            b1.Property<string>("Label");
+
+                            b1.Property<string>("Text")
+                                .IsRequired();
+
+                            b1.HasKey("AnnouncementId", "__synthesizedOrdinal");
+
+                            b1.ToTable("Announcements");
+
+                            b1
+                                .ToJson("Details")
+                                .HasColumnType("jsonb");
+
+                            b1.WithOwner()
+                                .HasForeignKey("AnnouncementId");
+                        });
+
+                    b.Navigation("Details");
                 });
 
             modelBuilder.Entity("ChurchAttendance.Domain.Attendance", b =>

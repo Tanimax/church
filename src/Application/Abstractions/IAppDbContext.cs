@@ -15,6 +15,8 @@ public interface IAppDbContext : IDisposable, IAsyncDisposable
     DbSet<SundayClass> SundayClasses { get; }
     DbSet<ServiceSchedule> ServiceSchedules { get; }
     DbSet<ScheduledService> ScheduledServices { get; }
+    DbSet<Announcement> Announcements { get; }
+    DbSet<MonthlyTheme> MonthlyThemes { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

@@ -1,4 +1,5 @@
 using ChurchAttendance.Application.Abstractions;
+using ChurchAttendance.Application.Announcements;
 using ChurchAttendance.Application.Errors;
 using ChurchAttendance.Application.Schedules;
 using ChurchAttendance.Domain;
@@ -18,6 +19,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<SundayClass> SundayClasses => Set<SundayClass>();
     public DbSet<ServiceSchedule> ServiceSchedules => Set<ServiceSchedule>();
     public DbSet<ScheduledService> ScheduledServices => Set<ScheduledService>();
+    public DbSet<Announcement> Announcements => Set<Announcement>();
+    public DbSet<MonthlyTheme> MonthlyThemes => Set<MonthlyTheme>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -48,6 +51,22 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             service.HasIndex(s => new { s.ServiceScheduleId, s.Date }).IsUnique();
             service.Property(s => s.Leader).HasMaxLength(ScheduleService.MaxNameLength);
             service.Property(s => s.Preacher).HasMaxLength(ScheduleService.MaxNameLength);
+        });
+        modelBuilder.Entity<Announcement>(announcement =>
+        {
+            announcement.Property(a => a.Kind).HasConversion<string>().HasMaxLength(20);
+            announcement.Property(a => a.Heading).HasMaxLength(AnnouncementService.MaxHeadingLength);
+            announcement.Property(a => a.Schedule).HasMaxLength(AnnouncementService.MaxScheduleLength);
+            announcement.Property(a => a.EventTime).HasMaxLength(AnnouncementService.MaxEventTimeLength);
+            announcement.Property(a => a.Title).HasMaxLength(AnnouncementService.MaxTitleLength);
+            // The detail lines only ever travel with their announcement: one JSON column.
+            announcement.OwnsMany(a => a.Details, details => details.ToJson());
+            announcement.Ignore(a => a.LastDay);
+        });
+        modelBuilder.Entity<MonthlyTheme>(theme =>
+        {
+            theme.HasIndex(t => new { t.Year, t.Month }).IsUnique();
+            theme.Property(t => t.Text).HasMaxLength(AnnouncementService.MaxThemeLength);
         });
     }
 

@@ -1,5 +1,5 @@
-const CACHE_NAME = 'church-card-v4';
-const STATIC_CARD_ASSETS = new Set(['style.css', 'sw.js', 'icon-192.png', 'icon-512.png']);
+const CACHE_NAME = 'church-card-v5';
+const STATIC_CARD_ASSETS = new Set(['style.css', 'sw.js', 'icon-180.png', 'icon-192.png', 'icon-512.png']);
 
 self.addEventListener('install', () => {
     self.skipWaiting();

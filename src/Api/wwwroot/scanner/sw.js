@@ -1,10 +1,11 @@
-const CACHE_NAME = 'church-scanner-v3';
+const CACHE_NAME = 'church-scanner-v4';
 const APP_SHELL = [
     '/scanner/index.html',
     '/scanner/style.css',
     '/scanner/app.js',
     '/scanner/manifest.json',
     '/scanner/lib/html5-qrcode.min.js',
+    '/card/icon-180.png',
     '/card/icon-192.png',
     '/card/icon-512.png'
 ];

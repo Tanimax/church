@@ -77,7 +77,7 @@ public static class CardEndpoints
                 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
                 <title>Carte de présence — {{safeName}}</title>
                 <link rel="manifest" href="/card/{{token}}/manifest.webmanifest">
-                <link rel="apple-touch-icon" href="/card/icon-192.png">
+                <link rel="apple-touch-icon" sizes="180x180" href="/card/icon-180.png">
                 <meta name="theme-color" content="#2c3e50">
                 <link rel="stylesheet" href="/card/style.css">
             </head>

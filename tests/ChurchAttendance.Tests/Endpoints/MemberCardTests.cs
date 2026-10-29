@@ -10,7 +10,8 @@ using SixLabors.ImageSharp.PixelFormats;
 
 namespace ChurchAttendance.Tests.Endpoints;
 
-// The church banner tops the member card, on the phone and on the printed PNG.
+// The church banner tops the member card, on the phone and on the printed PNG; the home-screen
+// shortcut shows the church's arched-window logo.
 public class MemberCardTests
 {
     [Fact]
@@ -52,5 +53,41 @@ public class MemberCardTests
         var qrMiddle = bannerHeight + 220 + 420 / 2;
         Assert.Contains(Enumerable.Range(150, 300), x => card[x, qrMiddle].R < 60);
         Assert.True(bannerHeight + 220 + 420 <= card.Height);
+    }
+
+    [Theory]
+    [InlineData("/card/icon-180.png", 180)]
+    [InlineData("/card/icon-192.png", 192)]
+    [InlineData("/card/icon-512.png", 512)]
+    public async Task ShortcutIcons_ShowTheOrangeArchOnNavy(string path, int size)
+    {
+        using var factory = new CustomWebApplicationFactory();
+        var anonymous = factory.CreateClient();
+
+        var response = await anonymous.GetAsync(path);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal("image/png", response.Content.Headers.ContentType?.MediaType);
+        using var icon = Image.Load<Rgba32>(await response.Content.ReadAsByteArrayAsync());
+        Assert.Equal((size, size), (icon.Width, icon.Height));
+        // The previous icons were plain black squares: check for both of the logo's colours.
+        var pixels = Enumerable.Range(0, size * size).Select(i => icon[i % size, i / size]).ToList();
+        Assert.Contains(pixels, p => p.R > 200 && p.G is > 80 and < 130 && p.B < 80);   // orange
+        Assert.Contains(pixels, p => p.R < 20 && p.G < 40 && p.B is > 60 and < 110);    // navy
+    }
+
+    [Fact]
+    public async Task CardPage_PointsIPhonesToTheShortcutIcon()
+    {
+        using var factory = new CustomWebApplicationFactory();
+        await using (var db = factory.CreateDbContext())
+        {
+            db.Members.Add(new Member { FirstName = "Jean", LastName = "Dupont", Token = "jeton-icone", CreatedAt = DateTime.UtcNow });
+            await db.SaveChangesAsync();
+        }
+
+        var page = await factory.CreateClient().GetStringAsync("/card/jeton-icone");
+
+        Assert.Contains("<link rel=\"apple-touch-icon\" sizes=\"180x180\" href=\"/card/icon-180.png\">", page);
     }
 }

@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Hosting;
 
 namespace ChurchAttendance.Infrastructure.Cards;
 
-// The card font and banner ship in wwwroot, hence IWebHostEnvironment (see WebRootFiles).
+// The card font ships in wwwroot, hence IWebHostEnvironment (see WebRootFiles).
 internal sealed class MemberCardRenderer(IWebHostEnvironment env) : IMemberCardRenderer
 {
     public byte[] RenderZip(IEnumerable<(string FullName, string CardUrl)> members) =>

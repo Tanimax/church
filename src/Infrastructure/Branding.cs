@@ -2,9 +2,7 @@ using Microsoft.Extensions.FileProviders;
 
 namespace ChurchAttendance.Infrastructure;
 
-// The church's banner ("Église De Dieu De Béthel"), one file for every place it appears: the
-// member card page (served as /branding/banniere-eglise.jpg), the printed card PNG and the
-// quarterly schedule PDF.
+// The church's banner ("Église De Dieu De Béthel"), at the top of the quarterly schedule PDF.
 public static class Branding
 {
     public const string BannerFile = "branding/banniere-eglise.jpg";

@@ -1,5 +1,4 @@
 using System.Net;
-using ChurchAttendance.Infrastructure;
 using ChurchAttendance.Infrastructure.Cards;
 using ChurchAttendance.Tests.Infrastructure;
 using Microsoft.AspNetCore.Hosting;
@@ -10,12 +9,12 @@ using SixLabors.ImageSharp.PixelFormats;
 
 namespace ChurchAttendance.Tests.Endpoints;
 
-// The church banner tops the member card, on the phone and on the printed PNG; the home-screen
-// shortcut shows the church's arched-window logo.
+// The member card stays plain white, without the church banner (that one is for the schedule
+// PDF); the home-screen shortcut shows the church's arched-window logo.
 public class MemberCardTests
 {
     [Fact]
-    public async Task CardPage_ShowsTheBanner_WhichAnyoneCanLoad()
+    public async Task CardPage_HasNoBanner()
     {
         using var factory = new CustomWebApplicationFactory();
         await using (var db = factory.CreateDbContext())
@@ -26,33 +25,26 @@ public class MemberCardTests
         var anonymous = factory.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
 
         var page = await anonymous.GetStringAsync("/card/jeton-carte");
-        var banner = await anonymous.GetAsync("/branding/banniere-eglise.jpg");
+        var notFound = await anonymous.GetAsync("/card/inconnu");
 
-        Assert.Contains("<img class=\"banner\" src=\"/branding/banniere-eglise.jpg\"", page);
-        Assert.Equal(HttpStatusCode.OK, banner.StatusCode);
-        Assert.Equal("image/jpeg", banner.Content.Headers.ContentType?.MediaType);
+        Assert.Contains("<h1>Jean Dupont</h1>", page);
+        Assert.DoesNotContain("banniere-eglise", page);
+        Assert.DoesNotContain("banniere-eglise", await notFound.Content.ReadAsStringAsync());
     }
 
     [Fact]
-    public void PrintedCard_HasTheBannerOnTop_AndTheQrCodeBelowIt()
+    public void PrintedCard_IsWhiteOnTop_WithTheQrCodeBelowTheName()
     {
         using var factory = new CustomWebApplicationFactory();
         var webRoot = factory.Services.GetRequiredService<IWebHostEnvironment>().WebRootFileProvider;
 
         using var card = Image.Load<Rgba32>(CardImageService.GeneratePng("Jean Dupont", "https://eglise.example/card/abc", webRoot));
-        using var banner = Image.Load<Rgba32>(Branding.ReadBanner(webRoot));
 
-        Assert.Equal(600, card.Width);
-        var bannerHeight = 600 * banner.Height / banner.Width;
-        Assert.Equal(700 + bannerHeight, card.Height);
-        // Across the banner's middle row, mostly its blue (not the card's white background).
-        var blue = Enumerable.Range(0, card.Width).Count(x => card[x, bannerHeight / 2] is var p && p.B > p.R + 60);
-        Assert.True(blue > card.Width / 2, $"{blue}/{card.Width} pixels bleus dans le bandeau");
-        // The QR code moved down with the rest (420 px tall, 220 px below the banner): its
-        // middle row has black modules, and the card ends below it.
-        var qrMiddle = bannerHeight + 220 + 420 / 2;
-        Assert.Contains(Enumerable.Range(150, 300), x => card[x, qrMiddle].R < 60);
-        Assert.True(bannerHeight + 220 + 420 <= card.Height);
+        Assert.Equal((600, 700), (card.Width, card.Height));
+        // No banner: above the "CARTE DE MEMBRE" label, the card is white inside its border.
+        Assert.All(Enumerable.Range(10, card.Width - 20), x => Assert.Equal(new Rgba32(255, 255, 255), card[x, 20]));
+        // The QR code (420 px tall, 220 px from the top): its middle row has black modules.
+        Assert.Contains(Enumerable.Range(150, 300), x => card[x, 220 + 420 / 2].R < 60);
     }
 
     [Theory]

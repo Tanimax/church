@@ -58,7 +58,6 @@ public static class CardEndpoints
         </head>
         <body>
             <main class="card">
-                <img class="banner" src="/branding/banniere-eglise.jpg" alt="Église De Dieu De Béthel" />
                 <h1>Carte introuvable</h1>
                 <p class="hint">Ce lien ne correspond à aucune carte active. Demandez une nouvelle carte au secrétariat.</p>
             </main>
@@ -83,7 +82,6 @@ public static class CardEndpoints
             </head>
             <body>
                 <main class="card">
-                    <img class="banner" src="/branding/banniere-eglise.jpg" alt="Église De Dieu De Béthel" />
                     <h1>{{safeName}}</h1>
                     <img class="qr" src="/api/members/{{token}}/qr.png" alt="QR code de présence" />
                     <p class="hint">Présentez ce QR code à l'entrée du culte.</p>

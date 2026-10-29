@@ -7,7 +7,9 @@ public abstract record NavEntry(string Title, string Icon);
 
 // Policy or Roles decide who sees the link (neither: any signed-in user). The page itself
 // still checks access: a hidden link is not a security boundary.
-public sealed record NavPage(string Title, string Href, string Icon = "", string? Policy = null, string? Roles = null)
+// Hidden: left out of the menu while the church doesn't use the page; it still works from its
+// address and keeps its breadcrumb, so showing it again is a one-word change.
+public sealed record NavPage(string Title, string Href, string Icon = "", string? Policy = null, string? Roles = null, bool Hidden = false)
     : NavEntry(Title, Icon);
 
 public sealed record NavGroup(string Title, string Icon, IReadOnlyList<NavPage> Pages, string? Policy = null)
@@ -26,7 +28,7 @@ public static class SiteMap
         Home,
         new NavGroup("Rapports", "bar-chart-fill",
         [
-            new NavPage("Dominical", "admin/reports"),
+            new NavPage("Dominical", "admin/reports", Hidden: true),
             new NavPage("Sainte Cène", "admin/reports/sainte-cene"),
             new NavPage("Visiteurs", "admin/reports/visiteurs"),
             new NavPage("Anniversaires", "admin/reports/anniversaires"),
@@ -37,7 +39,7 @@ public static class SiteMap
             new NavPage("Programmation", "admin/programmation"),
         ], Policy: AuthorizationPolicies.ManageCommunication),
         new NavPage("Membres", "admin/members", "people-fill"),
-        new NavPage("École Dominicale", "admin/ecole-dominicale", "mortarboard-fill"),
+        new NavPage("École Dominicale", "admin/ecole-dominicale", "mortarboard-fill", Hidden: true),
         new NavPage("Utilisateurs", "admin/users", "person-badge-fill"),
     ];
 

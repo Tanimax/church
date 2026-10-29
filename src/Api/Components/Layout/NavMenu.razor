@@ -22,7 +22,7 @@
                             <summary class="nav-link" onclick="event.stopPropagation()">
                                 <span class="bi bi-@(group.Icon)-nav-menu" aria-hidden="true"></span> @group.Title
                             </summary>
-                            @foreach (var link in group.Pages)
+                            @foreach (var link in group.Pages.Where(p => !p.Hidden))
                             {
                                 <AuthorizeView Policy="@link.Policy" Roles="@link.Roles">
                                     <Authorized>
@@ -36,7 +36,7 @@
                     </Authorized>
                 </AuthorizeView>
             }
-            else if (entry is NavPage item)
+            else if (entry is NavPage { Hidden: false } item)
             {
                 <AuthorizeView Policy="@item.Policy" Roles="@item.Roles">
                     <Authorized>

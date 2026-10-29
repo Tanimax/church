@@ -60,9 +60,25 @@ public class NavigationTests
             html);
         var groups = Groups(html);
         Assert.True(groups["Rapports"].Open);
-        Assert.Equal(["Dominical", "Sainte Cène", "Visiteurs", "Anniversaires"], groups["Rapports"].Links);
+        Assert.Equal(["Sainte Cène", "Visiteurs", "Anniversaires"], groups["Rapports"].Links);
         Assert.False(groups["Communication"].Open);
         Assert.Equal(["Programmation"], groups["Communication"].Links);
+    }
+
+    [Theory]
+    [InlineData("/admin/ecole-dominicale", "École Dominicale")]
+    [InlineData("/admin/reports", "Rapport Dominical")]
+    public async Task UnusedPages_AreOutOfTheMenu_ButStillOpenFromTheirAddress(string path, string heading)
+    {
+        using var factory = new CustomWebApplicationFactory();
+        var client = await TestAuth.CreateAuthenticatedClientAsync(factory);
+
+        var menu = Clean(await client.GetStringAsync("/admin/members"));
+        var page = await client.GetAsync(path);
+
+        Assert.DoesNotContain($"href=\"{path.TrimStart('/')}\"", menu);
+        Assert.Equal(HttpStatusCode.OK, page.StatusCode);
+        Assert.Contains($"<h1>{heading}</h1>", WebUtility.HtmlDecode(await page.Content.ReadAsStringAsync()));
     }
 
     [Fact]

@@ -45,7 +45,7 @@ public class SchedulePdfRendererTests
         Assert.Contains("Sr Dirigeante 12", text);
         Assert.Contains("27 déc.", text);
         Assert.Contains("N.B. Si la date ne vous convient pas", text);
-        Assert.Contains(page.Letters, l => l.FontName.Contains("Liberation Sans", StringComparison.Ordinal));
+        Assert.Contains(page.Letters, l => l.FontName?.Contains("Liberation Sans", StringComparison.Ordinal) == true);
         Assert.Single(page.GetImages()); // the banner
     }
 

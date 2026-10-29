@@ -1,10 +1,11 @@
 using System.IO.Compression;
+using Microsoft.Extensions.FileProviders;
 
 namespace ChurchAttendance.Infrastructure.Cards;
 
 public static class MemberCardZipService
 {
-    public static byte[] BuildZip(IEnumerable<(string FullName, string CardUrl)> members, string webRootPath)
+    public static byte[] BuildZip(IEnumerable<(string FullName, string CardUrl)> members, IFileProvider webRoot)
     {
         using var zipStream = new MemoryStream();
         using (var archive = new ZipArchive(zipStream, ZipArchiveMode.Create, leaveOpen: true))
@@ -15,7 +16,7 @@ public static class MemberCardZipService
 
             foreach (var (fullName, cardUrl) in members)
             {
-                var png = CardImageService.GeneratePng(fullName, cardUrl, webRootPath);
+                var png = CardImageService.GeneratePng(fullName, cardUrl, webRoot);
                 var fileName = BuildUniqueFileName(fullName, usedNames);
 
                 var entry = archive.CreateEntry(fileName, CompressionLevel.Optimal);

@@ -68,6 +68,7 @@ public class NavigationTests
     [Theory]
     [InlineData("/admin/ecole-dominicale", "École Dominicale")]
     [InlineData("/admin/reports", "Rapport Dominical")]
+    [InlineData("/admin/sainte-cene-manuelle", "Sainte Cène manuelle")]
     public async Task UnusedPages_AreOutOfTheMenu_ButStillOpenFromTheirAddress(string path, string heading)
     {
         using var factory = new CustomWebApplicationFactory();
@@ -78,7 +79,7 @@ public class NavigationTests
 
         Assert.DoesNotContain($"href=\"{path.TrimStart('/')}\"", menu);
         Assert.Equal(HttpStatusCode.OK, page.StatusCode);
-        Assert.Contains($"<h1>{heading}</h1>", WebUtility.HtmlDecode(await page.Content.ReadAsStringAsync()));
+        Assert.Matches($"<h1[^>]*>{heading}</h1>", WebUtility.HtmlDecode(await page.Content.ReadAsStringAsync()));
     }
 
     [Fact]

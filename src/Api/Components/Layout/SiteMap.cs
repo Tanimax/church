@@ -33,7 +33,7 @@ public static class SiteMap
             new NavPage("Visiteurs", "admin/reports/visiteurs"),
             new NavPage("Anniversaires", "admin/reports/anniversaires"),
         ]),
-        new NavPage("Sainte Cène manuelle", "admin/sainte-cene-manuelle", "person-check-fill", Roles: "Admin,Secretaire"),
+        new NavPage("Sainte Cène manuelle", "admin/sainte-cene-manuelle", "person-check-fill", Roles: "Admin,Secretaire", Hidden: true),
         new NavGroup("Communication", "megaphone-fill",
         [
             new NavPage("Programmation", "admin/programmation"),

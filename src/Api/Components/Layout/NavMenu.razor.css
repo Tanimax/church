@@ -74,6 +74,15 @@
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%23c7cbdc' class='bi bi-person-badge-fill' viewBox='0 0 16 16'%3E%3Cpath d='M2 2a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2zm4.5 0a.5.5 0 0 0 0 1h3a.5.5 0 0 0 0-1zM8 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6m5 2.755C12.146 12.825 10.623 12 8 12s-4.146.826-5 1.755V14a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1z'/%3E%3C/svg%3E");
 }
 
+.bi-bar-chart-fill-nav-menu {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%23c7cbdc' class='bi bi-bar-chart-fill' viewBox='0 0 16 16'%3E%3Cpath d='M1 11a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1zm5-4a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1zm5-5a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1h-2a1 1 0 0 1-1-1z'/%3E%3C/svg%3E");
+}
+
+.bi-megaphone-fill-nav-menu {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%23c7cbdc' class='bi bi-megaphone-fill' viewBox='0 0 16 16'%3E%3Cpath d='M13 2.5a1.5 1.5 0 0 1 3 0v11a1.5 1.5 0 0 1-3 0zm-1 .724c-2.067.95-4.539 1.481-7 1.656v6.237a25 25 0 0 1 1.088.085c2.053.204 4.038.668 5.912 1.56zm-8 7.841V4.934c-.68.027-1.399.043-2.008.053A2.02 2.02 0 0 0 0 7v2c0 1.106.896 1.996 1.994 2.009l.496.008a64 64 0 0 1 1.51.048m1.39 1.081q.428.032.85.078l.253 1.69a1 1 0 0 1-.983 1.187h-.548a1 1 0 0 1-.916-.599l-1.314-2.48a66 66 0 0 1 1.692.064q.491.026.966.06'/%3E%3C/svg%3E");
+}
+
+
 .nav-item {
     font-size: 0.9rem;
     padding-bottom: 0.5rem;
@@ -132,5 +141,78 @@
         /* Allow sidebar to scroll for tall menus */
         height: calc(100vh - 3.5rem);
         overflow-y: auto;
+    }
+}
+
+/* A group of links (Rapports, Communication): a header that opens and closes, its links
+   indented below it without icons. */
+.nav-group {
+    padding-bottom: 0.5rem;
+    font-size: 0.9rem;
+}
+
+.nav-group > summary {
+    list-style: none;
+    cursor: pointer;
+    color: var(--sidebar-text, #c7cbdc);
+    border-radius: 8px;
+    height: 3rem;
+    display: flex;
+    align-items: center;
+    font-weight: 500;
+    font-size: 0.92rem;
+}
+
+.nav-group > summary::-webkit-details-marker {
+    display: none;
+}
+
+/* Chevron: points right when closed, down when open. */
+.nav-group > summary::after {
+    content: "";
+    margin-left: auto;
+    margin-right: 0.5rem;
+    width: 0.45rem;
+    height: 0.45rem;
+    border-right: 2px solid currentColor;
+    border-bottom: 2px solid currentColor;
+    transform: rotate(-45deg);
+    transition: transform 0.15s ease;
+}
+
+.nav-group[open] > summary::after {
+    transform: rotate(45deg);
+}
+
+.nav-group > summary:hover {
+    background-color: rgba(255,255,255,0.06);
+    color: var(--sidebar-text-active, #f6f4ef);
+}
+
+.nav-group > summary:focus-visible {
+    outline: 2px solid var(--brass-600, #a8763a);
+    outline-offset: -2px;
+}
+
+.nav-subitem {
+    padding-left: 2rem;
+    padding-bottom: 0.15rem;
+}
+
+/* .nav-item's first/last-of-type spacing is for the whole menu, not each group's links. */
+.nav-subitem:first-of-type,
+.nav-subitem:last-of-type {
+    padding-top: 0;
+    padding-bottom: 0.15rem;
+}
+
+.nav-subitem ::deep .nav-link {
+    height: 2.5rem;
+    line-height: 2.5rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .nav-group > summary::after {
+        transition: none;
     }
 }

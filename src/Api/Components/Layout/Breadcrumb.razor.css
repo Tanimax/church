@@ -1,0 +1,23 @@
+.app-breadcrumb {
+    margin: 1rem 0 0.25rem;
+    font-size: 0.85rem;
+}
+
+.app-breadcrumb .breadcrumb {
+    margin: 0;
+    --bs-breadcrumb-divider-color: var(--text-muted, #8b8f9c);
+    --bs-breadcrumb-item-active-color: var(--text-primary, #1b2436);
+}
+
+.app-breadcrumb .breadcrumb-item {
+    color: var(--text-secondary, #5c6478);
+}
+
+.app-breadcrumb a {
+    color: var(--brass-700, #8a5f28);
+    text-decoration: none;
+}
+
+.app-breadcrumb a:hover {
+    text-decoration: underline;
+}

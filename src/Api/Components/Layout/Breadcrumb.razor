@@ -1,0 +1,32 @@
+@inject NavigationManager Navigation
+
+@if (trail.Count > 0)
+{
+    <nav aria-label="Fil d'Ariane" class="app-breadcrumb">
+        <ol class="breadcrumb">
+            @for (var i = 0; i < trail.Count; i++)
+            {
+                var crumb = trail[i];
+                if (i == trail.Count - 1)
+                {
+                    <li class="breadcrumb-item active" aria-current="page">@crumb.Title</li>
+                }
+                else if (crumb.Href is not null)
+                {
+                    <li class="breadcrumb-item"><a href="@crumb.Href">@crumb.Title</a></li>
+                }
+                else
+                {
+                    <li class="breadcrumb-item">@crumb.Title</li>
+                }
+            }
+        </ol>
+    </nav>
+}
+
+@code {
+    private IReadOnlyList<Crumb> trail = [];
+
+    protected override void OnParametersSet() =>
+        trail = SiteMap.Trail(Navigation.ToBaseRelativePath(Navigation.Uri));
+}

@@ -34,4 +34,56 @@ public class ProgrammationPageTests
         Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
         Assert.StartsWith("/admin/login", response.Headers.Location?.OriginalString.Replace("http://localhost", ""));
     }
+
+    [Fact]
+    public async Task Pdf_ForTheSecretariat_IsTheSavedQuarter()
+    {
+        using var factory = new CustomWebApplicationFactory();
+        await factory.SeedUserAsync("secretaire", "motdepasse123", UserRole.Secretaire);
+        var client = await TestAuth.CreateAuthenticatedClientAsync(factory, "secretaire", "motdepasse123");
+
+        var response = await client.GetAsync("/admin/programmation/2026/4/pdf");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal("application/pdf", response.Content.Headers.ContentType?.MediaType);
+        Assert.Equal("Service_dominical_du_4_octobre_au_27_décembre_2026.pdf", response.Content.Headers.ContentDisposition?.FileNameStar);
+        Assert.StartsWith("%PDF", System.Text.Encoding.ASCII.GetString((await response.Content.ReadAsByteArrayAsync())[..4]));
+    }
+
+    [Fact]
+    public async Task Pdf_EcoleDominicale_IsSentAway()
+    {
+        using var factory = new CustomWebApplicationFactory();
+        await factory.SeedUserAsync("moniteur", "motdepasse123", UserRole.EcoleDominicale);
+        var client = await TestAuth.CreateAuthenticatedClientAsync(factory, "moniteur", "motdepasse123");
+
+        var response = await client.GetAsync("/admin/programmation/2026/4/pdf");
+
+        Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Pdf_NotLoggedIn_IsSentToLogin()
+    {
+        using var factory = new CustomWebApplicationFactory();
+        var client = factory.CreateClient(new Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
+
+        var response = await client.GetAsync("/admin/programmation/2026/4/pdf");
+
+        Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
+        Assert.Contains("/admin/login", response.Headers.Location?.OriginalString);
+    }
+
+    [Theory]
+    [InlineData("/admin/programmation/2026/5/pdf")]
+    [InlineData("/admin/programmation/1999/1/pdf")]
+    public async Task Pdf_NoSuchQuarter_IsNotFound(string url)
+    {
+        using var factory = new CustomWebApplicationFactory();
+        var client = await TestAuth.CreateAuthenticatedClientAsync(factory);
+
+        var response = await client.GetAsync(url);
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
 }

@@ -7,8 +7,16 @@
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" />
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
+    <PackageReference Include="PDFsharp-MigraDoc" />
     <PackageReference Include="SixLabors.ImageSharp" />
     <PackageReference Include="SixLabors.ImageSharp.Drawing" />
+    <PackageReference Include="System.Security.Cryptography.Pkcs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Fonts and banner of the schedule PDF, inside the assembly: no dependency on the
+         machine's fonts nor on where wwwroot is copied. -->
+    <EmbeddedResource Include="Documents/Assets/*.ttf;Documents/Assets/*.jpg" />
   </ItemGroup>
 
   <ItemGroup>

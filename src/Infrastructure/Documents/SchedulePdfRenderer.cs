@@ -3,13 +3,14 @@ using ChurchAttendance.Application.Schedules;
 using MigraDoc.DocumentObjectModel;
 using MigraDoc.DocumentObjectModel.Tables;
 using MigraDoc.Rendering;
+using Microsoft.AspNetCore.Hosting;
 
 namespace ChurchAttendance.Infrastructure.Documents;
 
 // The "Service dominical" sheet, reproduced from the church's own (LibreOffice) version:
 // Letter page, banner, bold underlined title and period, a boxed three-column table whose rows
 // take the colour of their month, then the N.B. line.
-internal sealed class SchedulePdfRenderer : ISchedulePdfRenderer
+internal sealed class SchedulePdfRenderer(IWebHostEnvironment env) : ISchedulePdfRenderer
 {
     // The sheet's colours for the 1st, 2nd and 3rd month of the quarter (measured on it).
     private static readonly Color[] MonthColors =
@@ -35,7 +36,7 @@ internal sealed class SchedulePdfRenderer : ISchedulePdfRenderer
         section.PageSetup.LeftMargin = Unit.FromInch(1.25);
         section.PageSetup.RightMargin = Unit.FromInch(8.5 - 1.25) - ContentWidth;
 
-        var banner = section.AddImage("base64:" + Convert.ToBase64String(DocumentAssets.Banner()));
+        var banner = section.AddImage("base64:" + Convert.ToBase64String(File.ReadAllBytes(Branding.BannerPath(env.WebRootPath))));
         banner.Width = ContentWidth;
         banner.LockAspectRatio = true;
 

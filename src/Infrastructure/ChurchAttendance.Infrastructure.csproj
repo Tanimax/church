@@ -14,9 +14,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <!-- Fonts and banner of the schedule PDF, inside the assembly: no dependency on the
-         machine's fonts nor on where wwwroot is copied. -->
-    <EmbeddedResource Include="Documents/Assets/*.ttf;Documents/Assets/*.jpg" />
+    <!-- Fonts of the schedule PDF, inside the assembly: no dependency on the machine's fonts. -->
+    <EmbeddedResource Include="Documents/Assets/*.ttf" />
   </ItemGroup>
 
   <ItemGroup>

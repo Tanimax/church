@@ -5,7 +5,7 @@ namespace ChurchAttendance.Infrastructure.Documents;
 
 // PDFsharp finds fonts through one process-wide resolver. The Docker image has no fonts, so the
 // sheet's own font (Liberation Sans, SIL OFL, licence next to the files) ships inside this
-// assembly, with the banner. Every family asked for is answered with it.
+// assembly. Every family asked for is answered with it.
 internal sealed class DocumentAssets : IFontResolver
 {
     public const string FamilyName = "Liberation Sans";
@@ -32,8 +32,6 @@ internal sealed class DocumentAssets : IFontResolver
         new(isBold ? Bold : Regular);
 
     public byte[] GetFont(string faceName) => Resource($"{faceName}.ttf");
-
-    public static byte[] Banner() => Resource("banniere-eglise.jpg");
 
     private static byte[] Resource(string fileName)
     {

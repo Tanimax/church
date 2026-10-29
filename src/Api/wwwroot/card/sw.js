@@ -1,5 +1,5 @@
-const CACHE_NAME = 'church-card-v4';
-const STATIC_CARD_ASSETS = new Set(['style.css', 'sw.js', 'icon-192.png', 'icon-512.png']);
+const CACHE_NAME = 'church-card-v5';
+const STATIC_CARD_ASSETS = new Set(['style.css', 'sw.js', 'icon-180.png', 'icon-192.png', 'icon-512.png']);
 
 self.addEventListener('install', () => {
     self.skipWaiting();
@@ -22,14 +22,12 @@ self.addEventListener('fetch', (event) => {
     const url = new URL(event.request.url);
     const isCardRequest = url.pathname.startsWith('/card/');
     const isQrRequest = /^\/api\/members\/[^/]+\/qr\.png$/.test(url.pathname);
-    // The church banner at the top of the card: needed offline too.
-    const isBannerRequest = url.pathname === '/branding/banniere-eglise.jpg';
 
-    if (event.request.method !== 'GET' || !(isCardRequest || isQrRequest || isBannerRequest)) {
+    if (event.request.method !== 'GET' || !(isCardRequest || isQrRequest)) {
         return;
     }
 
-    if (isQrRequest || isBannerRequest || isStaticCardAsset(url.pathname)) {
+    if (isQrRequest || isStaticCardAsset(url.pathname)) {
         // The QR image and static assets never change for a given token — safe to
         // serve from cache indefinitely once fetched once.
         event.respondWith(

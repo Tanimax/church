@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+<!-- Source of /card/icon-*.png (home-screen shortcut): the arched window from the banner, redrawn so it stays sharp at 512 px. -->
+<rect width="512" height="512" fill="#051455"/>
+<path d="M156.0,420.0 V238.0 A156.0,156.0 0 0 1 256.0,92.4 A156.0,156.0 0 0 1 356.0,238.0 V420.0 Z" fill="#fe682d"/>
+<path d="M180.0,420.0 V238.0 A132.0,132.0 0 0 1 256.0,118.5 A132.0,132.0 0 0 1 332.0,238.0 V420.0 Z" fill="#051455"/>
+<path d="M196.0,420.0 V238.0 A116.0,116.0 0 0 1 256.0,136.4 A116.0,116.0 0 0 1 316.0,238.0 V420.0 Z" fill="#fe682d"/>
+<path d="M220.0,420.0 V238.0 A92.0,92.0 0 0 1 256.0,165.0 A92.0,92.0 0 0 1 292.0,238.0 V420.0 Z" fill="#051455"/>
+<rect x="250.0" y="199.0" width="12" height="221.0" fill="#fe682d"/>
+<rect x="220.0" y="244.0" width="72.0" height="12" fill="#fe682d"/>
+</svg>

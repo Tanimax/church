@@ -35,6 +35,13 @@ public class ProgrammationJourneyTests(AppFixture fixture)
             await page.ClickAsync("button:has-text('Enregistrer')");
             await Expect(page.Locator(".alert-success")).ToContainTextAsync("Programmation enregistrée.");
 
+            // The saved quarter can be downloaded as the printable sheet.
+            var pdfLink = page.Locator("a:has-text('Télécharger le PDF')");
+            await Expect(pdfLink).ToBeVisibleAsync();
+            var pdf = await page.APIRequest.GetAsync($"{fixture.BaseUrl}{await pdfLink.GetAttributeAsync("href")}");
+            Assert.Equal(200, pdf.Status);
+            Assert.Equal("application/pdf", pdf.Headers["content-type"]);
+
             // Back later: the page opens on the current quarter; go to the next one again.
             await page.ReloadAsync();
             await BlazorInteraction.ClickUntilVisibleAsync(page, "button:has-text('Trimestre suivant')",

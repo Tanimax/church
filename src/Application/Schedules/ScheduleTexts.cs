@@ -13,7 +13,9 @@ public static class ScheduleTexts
     private static readonly string[] MonthAbbreviations =
         ["janv.", "févr.", "mars", "avr.", "mai", "juin", "juil.", "août", "sept.", "oct.", "nov.", "déc."];
 
-    public static string ShortDate(DateOnly date) => $"{Day(date)} {MonthAbbreviations[date.Month - 1]}";
+    public static string ShortDate(DateOnly date) => $"{Day(date)} {MonthAbbreviation(date)}";
+
+    public static string MonthAbbreviation(DateOnly date) => MonthAbbreviations[date.Month - 1];
 
     // "Du 4 octobre au 27 décembre 2026" (the year once, unless the range spans two years).
     public static string Period(DateOnly first, DateOnly last) =>

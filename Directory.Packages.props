@@ -11,7 +11,13 @@
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.10" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Relational" Version="10.0.10" />
     <PackageVersion Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.3" />
+    <!-- Quarterly schedule PDF. Pinned to the last MIT release: from 6.5 PDFsharp is AGPL-3.0
+         and checks for a licence at run time. (QuestPDF's licence has eligibility conditions.) -->
+    <PackageVersion Include="PDFsharp-MigraDoc" Version="6.2.4" />
     <PackageVersion Include="QRCoder" Version="1.8.0" />
+    <!-- Explicit pin: PDFsharp 6.2.4 pulls in Pkcs 8.0.1, which has a known moderate-severity
+         advisory (GHSA-2fmv-rv2c-59x7); pin the patched package. -->
+    <PackageVersion Include="System.Security.Cryptography.Pkcs" Version="10.0.14" />
     <!-- Explicit pin: ImageSharp.Drawing 2.1.6 pulls in ImageSharp 3.1.8, which has a known
          moderate-severity advisory (GHSA-rxmq-m78w-7wmc); pin the patched core package. -->
     <PackageVersion Include="SixLabors.ImageSharp" Version="3.1.12" />
@@ -25,6 +31,7 @@
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
     <PackageVersion Include="Microsoft.Playwright" Version="1.62.0" />
     <PackageVersion Include="NetArchTest.Rules" Version="1.3.2" />
+    <PackageVersion Include="PdfPig" Version="0.1.16" />
     <PackageVersion Include="Testcontainers.PostgreSql" Version="4.16.0" />
     <PackageVersion Include="xunit" Version="2.9.3" />
     <PackageVersion Include="xunit.runner.visualstudio" Version="3.1.4" />

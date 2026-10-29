@@ -1,5 +1,6 @@
 using ChurchAttendance.Application.Abstractions;
 using ChurchAttendance.Infrastructure.Cards;
+using ChurchAttendance.Infrastructure.Documents;
 using ChurchAttendance.Infrastructure.Email;
 using ChurchAttendance.Infrastructure.Persistence;
 using ChurchAttendance.Infrastructure.Security;
@@ -17,6 +18,7 @@ public static class DependencyInjection
         services.AddHttpClient<IEmailSender, EmailService>(client => client.Timeout = TimeSpan.FromSeconds(10));
         services.AddSingleton<IPasswordHasher, PasswordHasher>();
         services.AddSingleton<IMemberCardRenderer, MemberCardRenderer>();
+        services.AddSingleton<ISchedulePdfRenderer, SchedulePdfRenderer>();
         return services;
     }
 }

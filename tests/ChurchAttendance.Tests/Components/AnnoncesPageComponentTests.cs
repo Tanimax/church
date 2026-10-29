@@ -6,6 +6,7 @@ using ChurchAttendance.Features.Announcements;
 using ChurchAttendance.Startup;
 using ChurchAttendance.Tests.Infrastructure;
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Web;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -41,32 +42,32 @@ public sealed class AnnoncesPageComponentTests : IDisposable
 
     private AnnouncementService Service => _scope.ServiceProvider.GetRequiredService<AnnouncementService>();
 
-    private IRenderedComponent<Annonces> Render()
+    private async Task<IRenderedComponent<Annonces>> RenderAsync()
     {
         var page = _bunit.Render<Annonces>();
-        page.WaitForAssertion(() => Assert.Empty(page.FindAll("em:contains('Chargement')")));
+        await page.WaitForAssertionAsync(() => Assert.Empty(page.FindAll("em:contains('Chargement')")));
         return page;
     }
 
-    private static void OpenNew(IRenderedComponent<Annonces> page) =>
-        page.Find("button:contains('+ Nouvelle annonce')").Click();
+    private static Task OpenNewAsync(IRenderedComponent<Annonces> page) =>
+        page.Find("button:contains('+ Nouvelle annonce')").ClickAsync(new MouseEventArgs());
 
     private static IElement Save(IRenderedComponent<Annonces> page) =>
         page.Find(".modal-footer .btn-primary");
 
     [Fact]
-    public void NewEvent_IsSaved_AndListedWithItsWhenLine()
+    public async Task NewEvent_IsSaved_AndListedWithItsWhenLine()
     {
-        var page = Render();
-        OpenNew(page);
+        var page = await RenderAsync();
+        await OpenNewAsync(page);
 
-        page.Find("#title").Change("Conférence du ministère des hommes et celui des dames.");
-        page.Find("#eventDate").Change("2026-10-31");
-        page.Find("#eventTime").Change("à 18h00");
-        page.Find("#details").Change("Sujet : L’identité des ouvriers dans l’Église.\nSoyez des nôtres !");
-        Save(page).Click();
+        await page.Find("#title").ChangeAsync("Conférence du ministère des hommes et celui des dames.");
+        await page.Find("#eventDate").ChangeAsync("2026-10-31");
+        await page.Find("#eventTime").ChangeAsync("à 18h00");
+        await page.Find("#details").ChangeAsync("Sujet : L’identité des ouvriers dans l’Église.\nSoyez des nôtres !");
+        await Save(page).ClickAsync(new MouseEventArgs());
 
-        page.WaitForAssertion(() => Assert.Empty(page.FindAll(".modal-content")));
+        await page.WaitForAssertionAsync(() => Assert.Empty(page.FindAll(".modal-content")));
         var item = page.Find(".announcement");
         Assert.Equal("Samedi 31 octobre 2026, à 18h00 :", item.QuerySelector(".when")!.TextContent);
         Assert.Equal("Sujet :", item.QuerySelector(".detail .label")!.TextContent);
@@ -75,52 +76,52 @@ public sealed class AnnoncesPageComponentTests : IDisposable
     }
 
     [Fact]
-    public void Dated_WithoutADate_IsRefused_AndTheFormStaysOpen()
+    public async Task Dated_WithoutADate_IsRefused_AndTheFormStaysOpen()
     {
-        var page = Render();
-        OpenNew(page);
+        var page = await RenderAsync();
+        await OpenNewAsync(page);
 
-        page.Find("#title").Change("Soirée du ministère des dames.");
-        Save(page).Click();
+        await page.Find("#title").ChangeAsync("Soirée du ministère des dames.");
+        await Save(page).ClickAsync(new MouseEventArgs());
 
-        page.WaitForAssertion(() => Assert.Contains(AnnouncementErrors.EventDateRequired.Message, page.Find(".modal-body").TextContent));
+        await page.WaitForAssertionAsync(() => Assert.Contains(AnnouncementErrors.EventDateRequired.Message, page.Find(".modal-body").TextContent));
         Assert.Empty(page.FindAll(".announcement"));
     }
 
     [Fact]
     public async Task EveryWeek_ShowsTheScheduleInsteadOfTheDate_AndSavesARecurringActivity()
     {
-        var page = Render();
-        OpenNew(page);
+        var page = await RenderAsync();
+        await OpenNewAsync(page);
 
-        page.Find("#weekly").Change(true);
+        await page.Find("#weekly").ChangeAsync(true);
         Assert.Empty(page.FindAll("#eventDate"));
-        page.Find("#schedule").Change("Vendredi soir de 19h00 à 21h30");
-        page.Find("#title").Change("Répétition de la chorale");
-        Save(page).Click();
+        await page.Find("#schedule").ChangeAsync("Vendredi soir de 19h00 à 21h30");
+        await page.Find("#title").ChangeAsync("Répétition de la chorale");
+        await Save(page).ClickAsync(new MouseEventArgs());
 
-        page.WaitForAssertion(() => Assert.Empty(page.FindAll(".modal-content")));
+        await page.WaitForAssertionAsync(() => Assert.Empty(page.FindAll(".modal-content")));
         Assert.Equal(AnnouncementKind.Recurring, Assert.Single(await Service.GetAllAsync(includeArchived: false)).Kind);
     }
 
     [Fact]
-    public void Preview_ShowsTheAnnouncementAsItsSlideWillRead()
+    public async Task Preview_ShowsTheAnnouncementAsItsSlideWillRead()
     {
-        var page = Render();
-        OpenNew(page);
+        var page = await RenderAsync();
+        await OpenNewAsync(page);
 
-        page.Find("#title").Change("L'Église Par la foi nous invite au réveil des dames.");
-        page.Find("#eventDate").Change("2026-11-06");
-        page.Find("#endDate").Change("2026-11-08");
-        page.Find("#external").Change(true);
-        page.Find("#details").Change("Sujet : Jean 14 : 1-3");
+        await page.Find("#title").ChangeAsync("L'Église Par la foi nous invite au réveil des dames.");
+        await page.Find("#eventDate").ChangeAsync("2026-11-06");
+        await page.Find("#endDate").ChangeAsync("2026-11-08");
+        await page.Find("#external").ChangeAsync(true);
+        await page.Find("#details").ChangeAsync("Sujet : Jean 14 : 1-3");
 
         var preview = page.Find(".preview");
         Assert.Equal(AnnouncementTexts.ExternalHeading, preview.QuerySelector(".preview-heading")!.TextContent);
         Assert.Equal("Du vendredi 6 au dimanche 8 novembre 2026 :", preview.QuerySelector(".when")!.TextContent);
         Assert.Equal("Sujet :", preview.QuerySelector(".detail .label")!.TextContent);
 
-        page.Find(".modal-footer .btn-secondary").Click();
+        await page.Find(".modal-footer .btn-secondary").ClickAsync(new MouseEventArgs());
         Assert.Empty(page.FindAll(".modal-content"));
     }
 
@@ -131,30 +132,30 @@ public sealed class AnnoncesPageComponentTests : IDisposable
         {
             Kind = AnnouncementKind.Recurring, Schedule = "Vendredi soir de 19h00 à 21h30", Title = "Répétition de la chorale",
         });
-        var page = Render();
+        var page = await RenderAsync();
 
-        page.Find("button:contains('Modifier')").Click();
+        await page.Find("button:contains('Modifier')").ClickAsync(new MouseEventArgs());
         Assert.Equal("Répétition de la chorale", page.Find("#title").GetAttribute("value"));
-        page.Find("#schedule").Change("Samedi matin de 9h00 à 11h00");
-        Save(page).Click();
+        await page.Find("#schedule").ChangeAsync("Samedi matin de 9h00 à 11h00");
+        await Save(page).ClickAsync(new MouseEventArgs());
 
-        page.WaitForAssertion(() => Assert.Equal("Samedi matin de 9h00 à 11h00 :", page.Find(".when").TextContent));
+        await page.WaitForAssertionAsync(() => Assert.Equal("Samedi matin de 9h00 à 11h00 :", page.Find(".when").TextContent));
     }
 
     [Fact]
     public async Task Archive_HidesIt_AndTheArchivedViewShowsIt_ForRestoring()
     {
         await Service.SaveAsync(new AnnouncementFormModel { Kind = AnnouncementKind.Pastoral, Title = "Les gens malades" });
-        var page = Render();
+        var page = await RenderAsync();
 
-        page.Find("button:contains('Archiver')").Click();
-        page.WaitForAssertion(() => Assert.Empty(page.FindAll(".announcement")));
+        await page.Find("button:contains('Archiver')").ClickAsync(new MouseEventArgs());
+        await page.WaitForAssertionAsync(() => Assert.Empty(page.FindAll(".announcement")));
 
-        page.Find("#showArchived").Change(true);
-        page.WaitForAssertion(() => Assert.Equal("Archivée", page.Find(".announcement .badge").TextContent));
+        await page.Find("#showArchived").ChangeAsync(true);
+        await page.WaitForAssertionAsync(() => Assert.Equal("Archivée", page.Find(".announcement .badge").TextContent));
 
-        page.Find("button:contains('Restaurer')").Click();
-        page.WaitForAssertion(() => Assert.Empty(page.FindAll(".announcement .badge")));
+        await page.Find("button:contains('Restaurer')").ClickAsync(new MouseEventArgs());
+        await page.WaitForAssertionAsync(() => Assert.Empty(page.FindAll(".announcement .badge")));
         Assert.False(Assert.Single(await Service.GetAllAsync(includeArchived: false)).IsArchived);
     }
 
@@ -166,7 +167,7 @@ public sealed class AnnoncesPageComponentTests : IDisposable
             Kind = AnnouncementKind.Event, EventDate = new DateOnly(2026, 10, 18), Title = "Journée missionnaire",
         });
 
-        var page = Render();
+        var page = await RenderAsync();
 
         Assert.Equal("Passée", page.Find(".announcement .badge").TextContent);
         Assert.Contains("0 annonce(s)", page.Markup);
@@ -175,25 +176,25 @@ public sealed class AnnoncesPageComponentTests : IDisposable
     [Fact]
     public async Task Theme_IsSavedForTheUpcomingSundaysMonth()
     {
-        var page = Render();
+        var page = await RenderAsync();
         Assert.Contains("Thème de octobre 2026", page.Markup);
 
-        page.Find("#theme").Change("Octobre : Mois d’actions de grâces");
-        page.Find("button:contains('Enregistrer le thème')").Click();
+        await page.Find("#theme").ChangeAsync("Octobre : Mois d’actions de grâces");
+        await page.Find("button:contains('Enregistrer le thème')").ClickAsync(new MouseEventArgs());
 
-        page.WaitForAssertion(() => Assert.Contains("Thème enregistré.", page.Markup));
+        await page.WaitForAssertionAsync(() => Assert.Contains("Thème enregistré.", page.Markup));
         Assert.Equal("Octobre : Mois d’actions de grâces", await Service.GetThemeAsync(2026, 10));
     }
 
     [Fact]
-    public void Theme_TooLong_ShowsWhy()
+    public async Task Theme_TooLong_ShowsWhy()
     {
-        var page = Render();
+        var page = await RenderAsync();
 
-        page.Find("#theme").Change(new string('x', AnnouncementService.MaxThemeLength + 1));
-        page.Find("button:contains('Enregistrer le thème')").Click();
+        await page.Find("#theme").ChangeAsync(new string('x', AnnouncementService.MaxThemeLength + 1));
+        await page.Find("button:contains('Enregistrer le thème')").ClickAsync(new MouseEventArgs());
 
-        page.WaitForAssertion(() => Assert.Contains(AnnouncementErrors.ThemeTooLong.Message, page.Markup));
+        await page.WaitForAssertionAsync(() => Assert.Contains(AnnouncementErrors.ThemeTooLong.Message, page.Markup));
     }
 
     [Fact]
@@ -201,19 +202,19 @@ public sealed class AnnoncesPageComponentTests : IDisposable
     {
         // A hidden or stale button can still be clicked: each handler checks the policy again.
         await Service.SaveAsync(new AnnouncementFormModel { Kind = AnnouncementKind.Pastoral, Title = "Les gens malades" });
-        var page = Render();
+        var page = await RenderAsync();
         _auth.SetPolicies();
 
-        page.Find("button:contains('Archiver')").Click();
-        page.WaitForAssertion(() => Assert.Contains("Accès refusé", page.Markup));
+        await page.Find("button:contains('Archiver')").ClickAsync(new MouseEventArgs());
+        await page.WaitForAssertionAsync(() => Assert.Contains("Accès refusé", page.Markup));
 
-        page.Find("#theme").Change("Octobre");
-        page.Find("button:contains('Enregistrer le thème')").Click();
-        OpenNew(page);
-        page.Find("#eventDate").Change("2026-10-31");
-        page.Find("#title").Change("Conférence");
-        Save(page).Click();
-        page.WaitForAssertion(() => Assert.Contains("Accès refusé", page.Find(".modal-body").TextContent));
+        await page.Find("#theme").ChangeAsync("Octobre");
+        await page.Find("button:contains('Enregistrer le thème')").ClickAsync(new MouseEventArgs());
+        await OpenNewAsync(page);
+        await page.Find("#eventDate").ChangeAsync("2026-10-31");
+        await page.Find("#title").ChangeAsync("Conférence");
+        await Save(page).ClickAsync(new MouseEventArgs());
+        await page.WaitForAssertionAsync(() => Assert.Contains("Accès refusé", page.Find(".modal-body").TextContent));
 
         await using var db = _factory.CreateDbContext();
         Assert.False((await db.Announcements.SingleAsync()).IsArchived);
@@ -225,24 +226,24 @@ public sealed class AnnoncesPageComponentTests : IDisposable
     public async Task Sunday_CanBeChanged_ToDownloadItsPowerPoint_WithItsMonthsTheme()
     {
         await Service.SaveThemeAsync(2026, 11, "Novembre : Mois de la famille");
-        var page = Render();
+        var page = await RenderAsync();
         Assert.Equal("/admin/annonces/2026-10-25/pptx", page.Find("a:contains('Télécharger le PowerPoint')").GetAttribute("href"));
 
-        page.Find("#sunday").Change("2026-11-01");
+        await page.Find("#sunday").ChangeAsync("2026-11-01");
 
-        page.WaitForAssertion(() => Assert.Equal("Novembre : Mois de la famille", page.Find("#theme").GetAttribute("value")));
+        await page.WaitForAssertionAsync(() => Assert.Equal("Novembre : Mois de la famille", page.Find("#theme").GetAttribute("value")));
         Assert.Equal("/admin/annonces/2026-11-01/pptx", page.Find("a:contains('Télécharger le PowerPoint')").GetAttribute("href"));
         Assert.Contains("Thème de novembre 2026", page.Markup);
     }
 
     [Fact]
-    public void Sunday_SetToAnotherDay_AsksForASunday()
+    public async Task Sunday_SetToAnotherDay_AsksForASunday()
     {
-        var page = Render();
+        var page = await RenderAsync();
 
-        page.Find("#sunday").Change("2026-10-28");
+        await page.Find("#sunday").ChangeAsync("2026-10-28");
 
-        page.WaitForAssertion(() => Assert.Contains("Choisissez un dimanche.", page.Markup));
+        await page.WaitForAssertionAsync(() => Assert.Contains("Choisissez un dimanche.", page.Markup));
         Assert.Empty(page.FindAll("a:contains('Télécharger le PowerPoint')"));
     }
 }

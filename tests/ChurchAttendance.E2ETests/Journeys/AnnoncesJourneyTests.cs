@@ -61,7 +61,7 @@ public class AnnoncesJourneyTests(AppFixture fixture)
 
             Assert.Matches(@"^Annonces_du_dimanche_.+\.pptx$", download.SuggestedFilename);
             var path = await download.PathAsync();
-            Assert.Equal("PK"u8.ToArray(), File.ReadAllBytes(path)[..2]);
+            Assert.Equal("PK"u8.ToArray(), (await File.ReadAllBytesAsync(path))[..2]);
         }
         finally
         {

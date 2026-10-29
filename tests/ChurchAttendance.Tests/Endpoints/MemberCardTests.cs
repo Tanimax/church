@@ -36,10 +36,10 @@ public class MemberCardTests
     public void PrintedCard_HasTheBannerOnTop_AndTheQrCodeBelowIt()
     {
         using var factory = new CustomWebApplicationFactory();
-        var webRoot = factory.Services.GetRequiredService<IWebHostEnvironment>().WebRootPath;
+        var webRoot = factory.Services.GetRequiredService<IWebHostEnvironment>().WebRootFileProvider;
 
         using var card = Image.Load<Rgba32>(CardImageService.GeneratePng("Jean Dupont", "https://eglise.example/card/abc", webRoot));
-        using var banner = Image.Load<Rgba32>(Branding.BannerPath(webRoot));
+        using var banner = Image.Load<Rgba32>(Branding.ReadBanner(webRoot));
 
         Assert.Equal(600, card.Width);
         var bannerHeight = 600 * banner.Height / banner.Width;

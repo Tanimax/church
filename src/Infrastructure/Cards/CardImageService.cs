@@ -1,4 +1,5 @@
 using ChurchAttendance.SharedKernel;
+using Microsoft.Extensions.FileProviders;
 using SixLabors.Fonts;
 using SixLabors.ImageSharp.Drawing.Processing;
 using SixLabors.ImageSharp.Drawing;
@@ -19,22 +20,23 @@ public static class CardImageService
     private const int Height = 700 + BannerHeight;
 
     // Docker's Linux base image has no system fonts installed, so the font is bundled with the
-    // app instead of relying on SystemFonts (which would throw at render time). The path comes
-    // from IWebHostEnvironment.WebRootPath rather than AppContext.BaseDirectory — the static web
-    // assets pipeline doesn't physically copy wwwroot/ next to the DLL at build time (only at
-    // publish time), so a BaseDirectory-relative path works in the deployed container but not
-    // when running the build output directly.
+    // app (wwwroot/fonts) instead of relying on SystemFonts (which would throw at render time).
+    // Like the banner it is read through the web root's file provider (see WebRootFiles).
     private static FontFamily? _family;
 
-    private static FontFamily GetFamily(string webRootPath)
+    private static FontFamily GetFamily(IFileProvider webRoot)
     {
-        return _family ??= new FontCollection()
-            .Add(System.IO.Path.Combine(webRootPath, "fonts", "PublicSans-Variable.ttf"));
+        if (_family is null)
+        {
+            using var font = new MemoryStream(WebRootFiles.Read(webRoot, "fonts/PublicSans-Variable.ttf"));
+            _family = new FontCollection().Add(font);
+        }
+        return _family.Value;
     }
 
-    public static byte[] GeneratePng(string fullName, string cardUrl, string webRootPath)
+    public static byte[] GeneratePng(string fullName, string cardUrl, IFileProvider webRoot)
     {
-        var family = GetFamily(webRootPath);
+        var family = GetFamily(webRoot);
         var labelFont = family.CreateFont(20, FontStyle.Regular);
         var nameFont = family.CreateFont(38, FontStyle.Bold);
 
@@ -53,7 +55,7 @@ public static class CardImageService
             TextAlignment = TextAlignment.Center
         };
 
-        using (var banner = Image.Load(Branding.BannerPath(webRootPath)))
+        using (var banner = Image.Load(Branding.ReadBanner(webRoot)))
         {
             banner.Mutate(ctx => ctx.Resize(Width, BannerHeight));
             image.Mutate(ctx => ctx.DrawImage(banner, new Point(0, 0), 1f));

@@ -36,7 +36,7 @@ internal sealed class SchedulePdfRenderer(IWebHostEnvironment env) : ISchedulePd
         section.PageSetup.LeftMargin = Unit.FromInch(1.25);
         section.PageSetup.RightMargin = Unit.FromInch(8.5 - 1.25) - ContentWidth;
 
-        var banner = section.AddImage("base64:" + Convert.ToBase64String(File.ReadAllBytes(Branding.BannerPath(env.WebRootPath))));
+        var banner = section.AddImage("base64:" + Convert.ToBase64String(Branding.ReadBanner(env.WebRootFileProvider)));
         banner.Width = ContentWidth;
         banner.LockAspectRatio = true;
 

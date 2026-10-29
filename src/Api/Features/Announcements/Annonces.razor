@@ -17,6 +17,21 @@
 }
 else
 {
+    <section class="deck d-flex flex-wrap align-items-end gap-2 mb-4">
+        <div>
+            <label class="form-label fw-semibold" for="sunday">Dimanche des annonces</label>
+            <input id="sunday" type="date" class="form-control" @bind="sunday" @bind:after="ChangeSundayAsync" />
+        </div>
+        @if (sunday.DayOfWeek == DayOfWeek.Sunday)
+        {
+            <a class="btn btn-primary" href="@AnnouncementEndpoints.DeckUrl(sunday)" download>Télécharger le PowerPoint</a>
+        }
+        else
+        {
+            <span class="text-danger pb-2">Choisissez un dimanche.</span>
+        }
+    </section>
+
     <section class="theme mb-4">
         <label class="form-label fw-semibold" for="theme">
             Thème de @AnnouncementTexts.MonthName(sunday.Month) @sunday.Year
@@ -248,6 +263,15 @@ else
     }
 
     private async Task LoadAsync() => announcements = await AnnouncementService.GetAllAsync(showArchived);
+
+    // Another Sunday: its month may have another theme.
+    private async Task ChangeSundayAsync()
+    {
+        themeSaved = false;
+        themeError = null;
+        pageError = await TryRunAsync(async () => theme = await AnnouncementService.GetThemeAsync(sunday.Year, sunday.Month),
+            "Impossible de charger le thème du mois");
+    }
 
     private async Task ReloadAsync() => listError = await TryRunAsync(LoadAsync, "Impossible de charger les annonces");
 

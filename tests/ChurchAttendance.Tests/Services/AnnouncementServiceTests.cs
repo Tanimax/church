@@ -185,4 +185,34 @@ public class AnnouncementServiceTests
 
         Assert.Equal(AnnouncementErrors.ThemeTooLong, result.Error);
     }
+
+    [Fact]
+    public async Task GetDeckAsync_HasThatSundaysAnnouncements_ItsMonthsTheme_AndTheBirthdayReportsNames()
+    {
+        using var factory = new CustomWebApplicationFactory();
+        var service = Service(factory);
+        await service.SaveAsync(Conference()); // 31 October: over by Sunday 1 November
+        await service.SaveAsync(new AnnouncementFormModel
+        {
+            Kind = AnnouncementKind.Recurring, Schedule = "Mercredi soir de 19h00 à 21h15", Title = "Réunion de prière",
+        });
+        await service.SaveThemeAsync(2026, 11, "Novembre : Mois de la famille");
+        await using (var db = factory.CreateDbContext())
+        {
+            // The birthdays report for Sunday 1 November covers Monday 26 October to that Sunday.
+            db.Members.AddRange(
+                new Member { FirstName = "Claudette", LastName = "Silyon", BirthDay = 1, BirthMonth = 11, Token = "t1", CreatedAt = DateTime.UtcNow },
+                new Member { FirstName = "Kyan Mybensly", LastName = "Paul", BirthDay = 27, BirthMonth = 10, Token = "t2", CreatedAt = DateTime.UtcNow },
+                new Member { FirstName = "Hors", LastName = "Semaine", BirthDay = 25, BirthMonth = 10, Token = "t3", CreatedAt = DateTime.UtcNow },
+                new Member { FirstName = "Partie", LastName = "Inactive", BirthDay = 28, BirthMonth = 10, IsActive = false, Token = "t4", CreatedAt = DateTime.UtcNow });
+            await db.SaveChangesAsync();
+        }
+
+        var deck = await service.GetDeckAsync(new DateOnly(2026, 11, 1));
+
+        Assert.Equal("Dimanche 1er novembre 2026", deck.Date.ToString());
+        Assert.Equal(["Novembre : Mois de la famille", AnnouncementDeck.BirthdaysHeading], deck.Slides.Select(s => s.Heading));
+        Assert.Equal("Réunion de prière", deck.Slides[0].Paragraphs[1].Text);
+        Assert.Equal(["Kyan Mybensly Paul", "Claudette Silyon"], deck.Slides[1].Paragraphs.Select(p => p.Text));
+    }
 }

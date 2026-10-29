@@ -33,7 +33,8 @@ internal sealed class DocumentAssets : IFontResolver
 
     public byte[] GetFont(string faceName) => Resource($"{faceName}.ttf");
 
-    private static byte[] Resource(string fileName)
+    // A file of Documents/Assets, embedded in this assembly.
+    internal static byte[] Resource(string fileName)
     {
         var assembly = typeof(DocumentAssets).Assembly;
         var name = assembly.GetManifestResourceNames().Single(n => n.EndsWith($".Assets.{fileName}", StringComparison.Ordinal));

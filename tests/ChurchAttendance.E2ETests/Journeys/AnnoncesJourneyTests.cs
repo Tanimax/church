@@ -45,4 +45,27 @@ public class AnnoncesJourneyTests(AppFixture fixture)
             await page.CloseAsync();
         }
     }
+
+    [Fact]
+    public async Task PowerPoint_DownloadsFromThePage()
+    {
+        // From the build output, as in the other journeys: the template (embedded) and the
+        // banner (wwwroot) must both be found.
+        var page = await fixture.Browser.NewPageAsync();
+        try
+        {
+            await E2EActions.LoginAsync(page, fixture.BaseUrl, "admin", E2EActions.AdminPassword);
+            await page.GotoAsync($"{fixture.BaseUrl}/admin/annonces");
+
+            var download = await page.RunAndWaitForDownloadAsync(() => page.ClickAsync("a:has-text('Télécharger le PowerPoint')"));
+
+            Assert.Matches(@"^Annonces_du_dimanche_.+\.pptx$", download.SuggestedFilename);
+            var path = await download.PathAsync();
+            Assert.Equal("PK"u8.ToArray(), File.ReadAllBytes(path)[..2]);
+        }
+        finally
+        {
+            await page.CloseAsync();
+        }
+    }
 }

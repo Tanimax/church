@@ -19,6 +19,7 @@ public static class DependencyInjection
         services.AddSingleton<IPasswordHasher, PasswordHasher>();
         services.AddSingleton<IMemberCardRenderer, MemberCardRenderer>();
         services.AddSingleton<ISchedulePdfRenderer, SchedulePdfRenderer>();
+        services.AddSingleton<IAnnouncementSlidesRenderer, AnnouncementSlidesRenderer>();
         return services;
     }
 }

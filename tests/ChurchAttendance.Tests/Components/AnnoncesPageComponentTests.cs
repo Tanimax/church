@@ -204,4 +204,29 @@ public sealed class AnnoncesPageComponentTests : IDisposable
         Assert.Single(db.Announcements);
         Assert.Empty(db.MonthlyThemes);
     }
+
+    [Fact]
+    public async Task Sunday_CanBeChanged_ToDownloadItsPowerPoint_WithItsMonthsTheme()
+    {
+        await Service.SaveThemeAsync(2026, 11, "Novembre : Mois de la famille");
+        var page = Render();
+        Assert.Equal("/admin/annonces/2026-10-25/pptx", page.Find("a:contains('Télécharger le PowerPoint')").GetAttribute("href"));
+
+        page.Find("#sunday").Change("2026-11-01");
+
+        page.WaitForAssertion(() => Assert.Equal("Novembre : Mois de la famille", page.Find("#theme").GetAttribute("value")));
+        Assert.Equal("/admin/annonces/2026-11-01/pptx", page.Find("a:contains('Télécharger le PowerPoint')").GetAttribute("href"));
+        Assert.Contains("Thème de novembre 2026", page.Markup);
+    }
+
+    [Fact]
+    public void Sunday_SetToAnotherDay_AsksForASunday()
+    {
+        var page = Render();
+
+        page.Find("#sunday").Change("2026-10-28");
+
+        page.WaitForAssertion(() => Assert.Contains("Choisissez un dimanche.", page.Markup));
+        Assert.Empty(page.FindAll("a:contains('Télécharger le PowerPoint')"));
+    }
 }

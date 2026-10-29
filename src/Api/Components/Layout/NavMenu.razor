@@ -1,80 +1,54 @@
-﻿<div class="top-row ps-3 navbar navbar-dark">
+﻿@inject NavigationManager Navigation
+
+<div class="top-row ps-3 navbar navbar-dark">
     <div class="container-fluid">
         <a class="navbar-brand" href="">ChurchAttendance</a>
     </div>
 </div>
 
-<input type="checkbox" title="Navigation menu" class="navbar-toggler" />
+<input type="checkbox" title="Menu de navigation" class="navbar-toggler" />
 
 <div class="nav-scrollable" onclick="document.querySelector('.navbar-toggler').click()">
     <nav class="nav flex-column">
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
-                <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> Home
-            </NavLink>
-        </div>
-
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="admin/reports" Match="NavLinkMatch.All">
-                <span class="bi bi-calendar-check-fill-nav-menu" aria-hidden="true"></span> Rapport Dominical
-            </NavLink>
-        </div>
-
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="admin/reports/sainte-cene">
-                <span class="bi bi-cup-fill-nav-menu" aria-hidden="true"></span> Rapport Sainte Cène
-            </NavLink>
-        </div>
-
-        <AuthorizeView Roles="Admin,Secretaire">
-            <Authorized>
-                <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="admin/sainte-cene-manuelle">
-                        <span class="bi bi-person-check-fill-nav-menu" aria-hidden="true"></span> Sainte Cène manuelle
-                    </NavLink>
-                </div>
-            </Authorized>
-        </AuthorizeView>
-
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="admin/reports/visiteurs">
-                <span class="bi bi-person-plus-fill-nav-menu" aria-hidden="true"></span> Rapport Visiteurs
-            </NavLink>
-        </div>
-
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="admin/reports/anniversaires">
-                <span class="bi bi-gift-fill-nav-menu" aria-hidden="true"></span> Rapport Anniversaires
-            </NavLink>
-        </div>
-
-        <AuthorizeView Policy="@AuthorizationPolicies.ManageCommunication">
-            <Authorized>
-                <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="admin/programmation">
-                        <span class="bi bi-calendar-check-fill-nav-menu" aria-hidden="true"></span> Programmation
-                    </NavLink>
-                </div>
-            </Authorized>
-        </AuthorizeView>
-
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="admin/members">
-                <span class="bi bi-people-fill-nav-menu" aria-hidden="true"></span> Membres
-            </NavLink>
-        </div>
-
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="admin/ecole-dominicale">
-                <span class="bi bi-mortarboard-fill-nav-menu" aria-hidden="true"></span> École Dominicale
-            </NavLink>
-        </div>
-
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="admin/users">
-                <span class="bi bi-person-badge-fill-nav-menu" aria-hidden="true"></span> Utilisateurs
-            </NavLink>
-        </div>
+        @foreach (var entry in SiteMap.Menu)
+        {
+            if (entry is NavGroup group)
+            {
+                <AuthorizeView Policy="@group.Policy" Context="groupAuth">
+                    <Authorized>
+                        @* Opened on its own pages, so the current page's link is in view. The click
+                           stays here: the panel's own handler would close the phone menu. *@
+                        <details class="nav-group px-3" open="@SiteMap.Contains(group, CurrentPath)">
+                            <summary class="nav-link" onclick="event.stopPropagation()">
+                                <span class="bi bi-@(group.Icon)-nav-menu" aria-hidden="true"></span> @group.Title
+                            </summary>
+                            @foreach (var link in group.Pages)
+                            {
+                                <AuthorizeView Policy="@link.Policy" Roles="@link.Roles">
+                                    <Authorized>
+                                        <div class="nav-item nav-subitem">
+                                            <NavLink class="nav-link" href="@link.Href" Match="@SiteMap.MatchFor(link)">@link.Title</NavLink>
+                                        </div>
+                                    </Authorized>
+                                </AuthorizeView>
+                            }
+                        </details>
+                    </Authorized>
+                </AuthorizeView>
+            }
+            else if (entry is NavPage item)
+            {
+                <AuthorizeView Policy="@item.Policy" Roles="@item.Roles">
+                    <Authorized>
+                        <div class="nav-item px-3">
+                            <NavLink class="nav-link" href="@item.Href" Match="@SiteMap.MatchFor(item)">
+                                <span class="bi bi-@(item.Icon)-nav-menu" aria-hidden="true"></span> @item.Title
+                            </NavLink>
+                        </div>
+                    </Authorized>
+                </AuthorizeView>
+            }
+        }
 
         <AuthorizeView>
             <Authorized>
@@ -88,3 +62,6 @@
     </nav>
 </div>
 
+@code {
+    private string CurrentPath => Navigation.ToBaseRelativePath(Navigation.Uri);
+}

@@ -82,4 +82,43 @@ public class MemberCardTests
 
         Assert.Contains("<link rel=\"apple-touch-icon\" sizes=\"180x180\" href=\"/card/icon-180.png\">", page);
     }
+
+    [Fact]
+    public async Task Manifest_NamesTheShortcutAfterTheMember_AndOpensTheirCard()
+    {
+        using var factory = new CustomWebApplicationFactory();
+        await using (var db = factory.CreateDbContext())
+        {
+            db.Members.Add(new Member { FirstName = "Jean", LastName = "Dupont", Token = "jeton-manifeste", CreatedAt = DateTime.UtcNow });
+            await db.SaveChangesAsync();
+        }
+
+        var response = await factory.CreateClient().GetAsync("/card/jeton-manifeste/manifest.webmanifest");
+
+        Assert.Equal("application/manifest+json", response.Content.Headers.ContentType?.MediaType);
+        using var manifest = System.Text.Json.JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        var root = manifest.RootElement;
+        Assert.Equal("Carte de Jean Dupont", root.GetProperty("name").GetString());
+        Assert.Equal("Jean", root.GetProperty("short_name").GetString());
+        Assert.Equal("/card/jeton-manifeste", root.GetProperty("start_url").GetString());
+        Assert.Equal(["/card/icon-192.png", "/card/icon-512.png"],
+            root.GetProperty("icons").EnumerateArray().Select(i => i.GetProperty("src").GetString()));
+    }
+
+    [Theory]
+    [InlineData("jeton-inconnu")]
+    [InlineData("jeton-desactive")]
+    public async Task Manifest_ForAnUnknownOrDeactivatedCard_IsNotFound(string token)
+    {
+        using var factory = new CustomWebApplicationFactory();
+        await using (var db = factory.CreateDbContext())
+        {
+            db.Members.Add(new Member { FirstName = "Anne", LastName = "Partie", Token = "jeton-desactive", IsActive = false, CreatedAt = DateTime.UtcNow });
+            await db.SaveChangesAsync();
+        }
+
+        var response = await factory.CreateClient().GetAsync($"/card/{token}/manifest.webmanifest");
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
 }

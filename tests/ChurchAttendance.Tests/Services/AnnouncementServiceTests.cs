@@ -65,25 +65,39 @@ public class AnnouncementServiceTests
         Assert.Empty(saved.Details);
     }
 
-    public static TheoryData<AnnouncementFormModel, string> Invalid() => new()
+    // Each case is named by the error it must produce, so the test runner lists them one by one.
+    private static AnnouncementFormModel InvalidForm(string code) => code switch
     {
-        { new AnnouncementFormModel { Kind = AnnouncementKind.Event, EventDate = new DateOnly(2026, 10, 31), Title = "  " }, "announcement.title_required" },
-        { new AnnouncementFormModel { Kind = AnnouncementKind.Recurring, Title = "Répétition de la chorale" }, "announcement.schedule_required" },
-        { new AnnouncementFormModel { Kind = AnnouncementKind.Event, Title = "Soirée des dames" }, "announcement.event_date_required" },
-        { new AnnouncementFormModel { Kind = AnnouncementKind.External, EndDate = new DateOnly(2026, 11, 8), Title = "Réveil" }, "announcement.end_date_without_start" },
-        { new AnnouncementFormModel { Kind = AnnouncementKind.External, EventDate = new DateOnly(2026, 11, 8), EndDate = new DateOnly(2026, 11, 6), Title = "Réveil" }, "announcement.end_before_start" },
-        { new AnnouncementFormModel { Kind = AnnouncementKind.Pastoral, Title = new string('x', AnnouncementService.MaxTitleLength + 1) }, "announcement.too_long" },
-        { new AnnouncementFormModel { Kind = AnnouncementKind.Pastoral, Title = "Malades",
-            Details = Enumerable.Range(0, AnnouncementService.MaxDetails + 1).Select(i => new AnnouncementDetailRow { Text = $"Ligne {i}" }).ToList() }, "announcement.too_many_details" },
+        "announcement.title_required" => new() { Kind = AnnouncementKind.Event, EventDate = new DateOnly(2026, 10, 31), Title = "  " },
+        "announcement.schedule_required" => new() { Kind = AnnouncementKind.Recurring, Title = "Répétition de la chorale" },
+        "announcement.event_date_required" => new() { Kind = AnnouncementKind.Event, Title = "Soirée des dames" },
+        "announcement.end_date_without_start" => new() { Kind = AnnouncementKind.External, EndDate = new DateOnly(2026, 11, 8), Title = "Réveil" },
+        "announcement.end_before_start" => new()
+        {
+            Kind = AnnouncementKind.External, EventDate = new DateOnly(2026, 11, 8), EndDate = new DateOnly(2026, 11, 6), Title = "Réveil",
+        },
+        "announcement.too_long" => new() { Kind = AnnouncementKind.Pastoral, Title = new string('x', AnnouncementService.MaxTitleLength + 1) },
+        "announcement.too_many_details" => new()
+        {
+            Kind = AnnouncementKind.Pastoral, Title = "Malades",
+            Details = Enumerable.Range(0, AnnouncementService.MaxDetails + 1).Select(i => new AnnouncementDetailRow { Text = $"Ligne {i}" }).ToList(),
+        },
+        _ => throw new ArgumentOutOfRangeException(nameof(code), code, null),
     };
 
     [Theory]
-    [MemberData(nameof(Invalid))]
-    public async Task SaveAsync_Invalid_IsRefused_AndNothingIsSaved(AnnouncementFormModel form, string code)
+    [InlineData("announcement.title_required")]
+    [InlineData("announcement.schedule_required")]
+    [InlineData("announcement.event_date_required")]
+    [InlineData("announcement.end_date_without_start")]
+    [InlineData("announcement.end_before_start")]
+    [InlineData("announcement.too_long")]
+    [InlineData("announcement.too_many_details")]
+    public async Task SaveAsync_Invalid_IsRefused_AndNothingIsSaved(string code)
     {
         using var factory = new CustomWebApplicationFactory();
 
-        var result = await Service(factory).SaveAsync(form);
+        var result = await Service(factory).SaveAsync(InvalidForm(code));
 
         Assert.Equal(code, result.Error?.Code);
         await using var db = factory.CreateDbContext();

@@ -1,0 +1,9 @@
+/* Same month colours as the printed sheet: 1st, 2nd and 3rd month of the quarter. */
+.schedule-date {
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.month-0 { color: #1a9c48; }
+.month-1 { color: #c95bb4; }
+.month-2 { color: #1f95cc; }

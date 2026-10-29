@@ -15,6 +15,10 @@ public static class AuthorizationPolicies
     // Create, edit, activate or deactivate members and organise the Sunday school classes:
     // Admin and École du dimanche, not Secrétaire.
     public const string ManageMembers = "ManageMembers";
+
+    // Prepare what the church communicates (quarterly service schedule, announcements):
+    // Admin and Secrétaire.
+    public const string ManageCommunication = "ManageCommunication";
 }
 
 public static class SecuritySetup
@@ -35,8 +39,12 @@ public static class SecuritySetup
                 options.Events.OnRedirectToAccessDenied = context => RedirectOrStatus(context, StatusCodes.Status403Forbidden);
             });
         services.AddAuthorization(options =>
+        {
             options.AddPolicy(AuthorizationPolicies.ManageMembers,
-                policy => policy.RequireRole(nameof(UserRole.Admin), nameof(UserRole.EcoleDominicale))));
+                policy => policy.RequireRole(nameof(UserRole.Admin), nameof(UserRole.EcoleDominicale)));
+            options.AddPolicy(AuthorizationPolicies.ManageCommunication,
+                policy => policy.RequireRole(nameof(UserRole.Admin), nameof(UserRole.Secretaire)));
+        });
         return services;
     }
 

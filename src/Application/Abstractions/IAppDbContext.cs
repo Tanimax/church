@@ -13,6 +13,8 @@ public interface IAppDbContext : IDisposable, IAsyncDisposable
     DbSet<Visitor> Visitors { get; }
     DbSet<User> Users { get; }
     DbSet<SundayClass> SundayClasses { get; }
+    DbSet<ServiceSchedule> ServiceSchedules { get; }
+    DbSet<ScheduledService> ScheduledServices { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

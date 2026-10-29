@@ -109,6 +109,65 @@ namespace ChurchAttendance.Infrastructure.Persistence.Migrations
                     b.ToTable("Members");
                 });
 
+            modelBuilder.Entity("ChurchAttendance.Domain.ScheduledService", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateOnly>("Date")
+                        .HasColumnType("date");
+
+                    b.Property<string>("Leader")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("Preacher")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<int>("ServiceScheduleId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ServiceScheduleId", "Date")
+                        .IsUnique();
+
+                    b.ToTable("ScheduledServices");
+                });
+
+            modelBuilder.Entity("ChurchAttendance.Domain.ServiceSchedule", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("FooterNote")
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
+                    b.Property<int>("Quarter")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("Year")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Year", "Quarter")
+                        .IsUnique();
+
+                    b.ToTable("ServiceSchedules");
+                });
+
             modelBuilder.Entity("ChurchAttendance.Domain.ServiceSession", b =>
                 {
                     b.Property<int>("Id")
@@ -240,6 +299,20 @@ namespace ChurchAttendance.Infrastructure.Persistence.Migrations
                         .HasForeignKey("SundayClassId");
 
                     b.Navigation("SundayClass");
+                });
+
+            modelBuilder.Entity("ChurchAttendance.Domain.ScheduledService", b =>
+                {
+                    b.HasOne("ChurchAttendance.Domain.ServiceSchedule", null)
+                        .WithMany("Services")
+                        .HasForeignKey("ServiceScheduleId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("ChurchAttendance.Domain.ServiceSchedule", b =>
+                {
+                    b.Navigation("Services");
                 });
 #pragma warning restore 612, 618
         }

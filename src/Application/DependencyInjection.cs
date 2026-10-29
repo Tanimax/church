@@ -1,3 +1,4 @@
+using ChurchAttendance.Application.Announcements;
 using ChurchAttendance.Application.Members;
 using ChurchAttendance.Application.Schedules;
 using ChurchAttendance.Application.SundayClasses;
@@ -10,6 +11,7 @@ public static class DependencyInjection
 {
     public static IServiceCollection AddApplication(this IServiceCollection services)
     {
+        services.AddScoped<AnnouncementService>();
         services.AddScoped<MemberService>();
         services.AddScoped<ScheduleService>();
         services.AddScoped<SundayClassService>();

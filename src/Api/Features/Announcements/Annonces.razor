@@ -1,0 +1,378 @@
+@page "/admin/annonces"
+@attribute [Authorize(Policy = AuthorizationPolicies.ManageCommunication)]
+@rendermode InteractiveServer
+@inherits AppComponentBase
+@using ChurchAttendance.Application.Announcements
+@inject AnnouncementService AnnouncementService
+
+<PageTitle>Annonces</PageTitle>
+
+<h1>Annonces</h1>
+
+<ErrorAlert Message="@pageError" />
+
+@if (announcements is null)
+{
+    <p><em>Chargement...</em></p>
+}
+else
+{
+    <section class="theme mb-4">
+        <label class="form-label fw-semibold" for="theme">
+            Thème de @AnnouncementTexts.MonthName(sunday.Month) @sunday.Year
+        </label>
+        <div class="d-flex flex-wrap gap-2">
+            <input id="theme" class="form-control theme-input" maxlength="@AnnouncementService.MaxThemeLength"
+                   placeholder="Ex. : Octobre : Mois d'actions de grâces" @bind="theme" />
+            <button type="button" class="btn btn-outline-primary" disabled="@savingTheme" @onclick="SaveThemeAsync">
+                @(savingTheme ? "Enregistrement..." : "Enregistrer le thème")
+            </button>
+        </div>
+        <div class="form-text">En tête des diapositives des annonces de l'église.</div>
+        <ErrorAlert Message="@themeError" />
+        @if (themeSaved)
+        {
+            <div class="alert alert-success mt-2" role="status">Thème enregistré.</div>
+        }
+    </section>
+
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+        <button type="button" class="btn btn-primary" @onclick="OpenNew">+ Nouvelle annonce</button>
+        <div class="form-check">
+            <input id="showArchived" class="form-check-input" type="checkbox" @bind="showArchived" @bind:after="ReloadAsync" />
+            <label class="form-check-label" for="showArchived">Voir les annonces archivées</label>
+        </div>
+    </div>
+
+    <p class="text-muted">
+        Annonces du dimanche @sunday.ToString("dd/MM/yyyy") :
+        @announcements.Count(a => a.IsShownOn(sunday)) annonce(s). Un événement passé n'y figure plus.
+    </p>
+
+    <ErrorAlert Message="@listError" />
+
+    @foreach (var group in announcements.GroupBy(a => a.Kind))
+    {
+        <h2 class="h5 mt-4">@AnnouncementTexts.KindLabel(group.Key)</h2>
+        <ul class="list-unstyled announcements">
+            @foreach (var announcement in group)
+            {
+                var shown = announcement.IsShownOn(sunday);
+                <li class="announcement @(shown ? "" : "is-off")">
+                    <div class="announcement-text">
+                        @if (AnnouncementTexts.WhenLine(announcement) is { } when)
+                        {
+                            <div class="when">@when</div>
+                        }
+                        <div class="title">@announcement.Title</div>
+                        @foreach (var detail in announcement.Details)
+                        {
+                            <div class="detail">
+                                @if (detail.Label is not null)
+                                {
+                                    <span class="label">@detail.Label :</span>@(" ")
+                                }
+                                <span>@detail.Text</span>
+                            </div>
+                        }
+                        @if (announcement.IsArchived)
+                        {
+                            <span class="badge text-bg-secondary">Archivée</span>
+                        }
+                        else if (!shown)
+                        {
+                            <span class="badge text-bg-light">Passée</span>
+                        }
+                    </div>
+                    <div class="announcement-actions">
+                        <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="() => OpenEdit(announcement)">Modifier</button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary" disabled="@archiving"
+                                @onclick="() => SetArchivedAsync(announcement, !announcement.IsArchived)">
+                            @(announcement.IsArchived ? "Restaurer" : "Archiver")
+                        </button>
+                    </div>
+                </li>
+            }
+        </ul>
+    }
+
+    @if (announcements.Count == 0)
+    {
+        <p class="text-muted">Aucune annonce pour l'instant.</p>
+    }
+}
+
+@if (form is not null)
+{
+    <div class="modal fade show d-block" tabindex="-1" role="dialog" @onclick="CloseForm">
+        <div class="modal-dialog modal-lg" role="document" @onclick:stopPropagation="true">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">@(form.Id == 0 ? "Nouvelle annonce" : "Modifier l'annonce")</h5>
+                    <button type="button" class="btn-close" aria-label="Fermer" @onclick="CloseForm"></button>
+                </div>
+                <div class="modal-body">
+                    <ErrorAlert Message="@formError" />
+
+                    <div class="mb-3">
+                        <label class="form-label" for="kind">Type</label>
+                        <select id="kind" class="form-select" @bind="form.Kind">
+                            @foreach (var kind in Enum.GetValues<AnnouncementKind>())
+                            {
+                                <option value="@kind">@KindOption(kind)</option>
+                            }
+                        </select>
+                    </div>
+
+                    @if (form.Kind == AnnouncementKind.Recurring)
+                    {
+                        <div class="mb-3">
+                            <label class="form-label" for="schedule">Quand</label>
+                            <input id="schedule" class="form-control" maxlength="@AnnouncementService.MaxScheduleLength"
+                                   placeholder="Ex. : Mercredi soir de 19h00 à 21h15" @bind="form.Schedule" />
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="row">
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label" for="eventDate">
+                                    Date @(form.Kind == AnnouncementKind.Event ? "" : "(facultative)")
+                                </label>
+                                <input id="eventDate" type="date" class="form-control" @bind="form.EventDate" />
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label" for="endDate">Jusqu'au (plusieurs jours)</label>
+                                <input id="endDate" type="date" class="form-control" @bind="form.EndDate" />
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label" for="eventTime">Heure</label>
+                                <input id="eventTime" class="form-control" maxlength="@AnnouncementService.MaxEventTimeLength"
+                                       placeholder="Ex. : à 18h00" @bind="form.EventTime" />
+                            </div>
+                        </div>
+                        @if (form.Kind != AnnouncementKind.Event)
+                        {
+                            <div class="mb-3">
+                                <label class="form-label" for="schedule">Quand, sans date précise (facultatif)</label>
+                                <input id="schedule" class="form-control" maxlength="@AnnouncementService.MaxScheduleLength" @bind="form.Schedule" />
+                            </div>
+                        }
+                        <div class="form-text mb-3">L'annonce disparaît d'elle-même une fois sa date passée.</div>
+                    }
+
+                    <div class="mb-3">
+                        <label class="form-label" for="title">Titre (ce qui a lieu)</label>
+                        <input id="title" class="form-control" maxlength="@AnnouncementService.MaxTitleLength"
+                               placeholder="Ex. : Réunion de prière ici à l'église, suivie de l'étude biblique." @bind="form.Title" />
+                    </div>
+
+                    <datalist id="detail-labels">
+                        <option value="Sujet"></option>
+                        <option value="Tél."></option>
+                        <option value="Prédicateur"></option>
+                        <option value="Horaire"></option>
+                        <option value="N.B."></option>
+                    </datalist>
+                    <fieldset class="mb-3">
+                        <legend class="form-label fs-6">Détails</legend>
+                        @foreach (var detail in form.Details)
+                        {
+                            <div class="d-flex gap-2 mb-2">
+                                <input class="form-control detail-label" list="detail-labels" maxlength="@AnnouncementService.MaxDetailLabelLength"
+                                       aria-label="Étiquette" placeholder="Sujet" @bind="detail.Label" />
+                                <input class="form-control" maxlength="@AnnouncementService.MaxDetailTextLength"
+                                       aria-label="Texte" @bind="detail.Text" />
+                                <button type="button" class="btn btn-outline-secondary" aria-label="Retirer la ligne"
+                                        @onclick="() => form.Details.Remove(detail)">✕</button>
+                            </div>
+                        }
+                        @if (form.Details.Count < AnnouncementService.MaxDetails)
+                        {
+                            <button type="button" class="btn btn-sm btn-outline-secondary"
+                                    @onclick="() => form.Details.Add(new AnnouncementDetailRow())">+ Ajouter une ligne</button>
+                        }
+                    </fieldset>
+
+                    <div class="mb-3">
+                        <label class="form-label" for="heading">Titre de section (facultatif)</label>
+                        <input id="heading" class="form-control" maxlength="@AnnouncementService.MaxHeadingLength"
+                               placeholder="Ex. : 2e jeûne annuel" @bind="form.Heading" />
+                        <div class="form-text">
+                            Sinon : @(form.Kind == AnnouncementKind.External ? $"« {AnnouncementTexts.ExternalHeading} »" : "le thème du mois").
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CloseForm">Annuler</button>
+                    <button type="button" class="btn btn-primary" disabled="@saving" @onclick="SaveAsync">
+                        @(saving ? "Enregistrement..." : "Enregistrer")
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal-backdrop fade show"></div>
+}
+
+@code {
+    private const string AccessDenied = "Accès refusé : seuls l'administrateur et le secrétariat peuvent gérer les annonces.";
+
+    private DateOnly sunday;
+    private List<Announcement>? announcements;
+    private bool showArchived;
+    private string? theme;
+
+    private AnnouncementFormModel? form;
+
+    private string? pageError;
+    private string? listError;
+    private string? formError;
+    private string? themeError;
+    private bool themeSaved;
+
+    // True while a save or an archive runs: a burst of clicks acts once (a double "Enregistrer"
+    // on a new announcement would otherwise create it twice).
+    private bool saving;
+    private bool savingTheme;
+    private bool archiving;
+
+    protected override async Task OnInitializedAsync()
+    {
+        sunday = AnnouncementService.UpcomingSunday;
+        pageError = await TryRunAsync(async () =>
+        {
+            theme = await AnnouncementService.GetThemeAsync(sunday.Year, sunday.Month);
+            await LoadAsync();
+        }, "Impossible de charger les annonces");
+    }
+
+    private async Task LoadAsync() => announcements = await AnnouncementService.GetAllAsync(showArchived);
+
+    private async Task ReloadAsync() => listError = await TryRunAsync(LoadAsync, "Impossible de charger les annonces");
+
+    private static string KindOption(AnnouncementKind kind) => kind switch
+    {
+        AnnouncementKind.Recurring => "Activité de la semaine (chaque semaine)",
+        AnnouncementKind.Event => "Événement (à une date)",
+        AnnouncementKind.Pastoral => "Annonce pastorale (permanente)",
+        AnnouncementKind.External => "Annonce externe (autre église)",
+        _ => kind.ToString(),
+    };
+
+    private void OpenNew()
+    {
+        formError = null;
+        form = new AnnouncementFormModel { Details = [new AnnouncementDetailRow()] };
+    }
+
+    private void OpenEdit(Announcement announcement)
+    {
+        formError = null;
+        form = AnnouncementFormModel.From(announcement);
+    }
+
+    private void CloseForm() => form = null;
+
+    private async Task SaveAsync()
+    {
+        // Set before the first await: Blazor runs the next click's handler as soon as this one awaits.
+        if (saving || form is null)
+        {
+            return;
+        }
+        saving = true;
+
+        try
+        {
+            if (!await IsAuthorizedAsync(AuthorizationPolicies.ManageCommunication))
+            {
+                formError = AccessDenied;
+                return;
+            }
+
+            Result<int>? result = null;
+            formError = await TryRunAsync(async () => result = await AnnouncementService.SaveAsync(form),
+                "Impossible d'enregistrer l'annonce");
+            if (formError is null && !result!.IsSuccess)
+            {
+                formError = result.Error!.Message;
+            }
+            if (formError is null)
+            {
+                form = null;
+                await ReloadAsync();
+            }
+        }
+        finally
+        {
+            saving = false;
+        }
+    }
+
+    private async Task SetArchivedAsync(Announcement announcement, bool archived)
+    {
+        if (archiving)
+        {
+            return;
+        }
+        archiving = true;
+
+        try
+        {
+            if (!await IsAuthorizedAsync(AuthorizationPolicies.ManageCommunication))
+            {
+                listError = AccessDenied;
+                return;
+            }
+
+            Result result = Result.Success();
+            listError = await TryRunAsync(async () => result = await AnnouncementService.SetArchivedAsync(announcement.Id, archived),
+                archived ? "Impossible d'archiver l'annonce" : "Impossible de restaurer l'annonce");
+            if (listError is null && !result.IsSuccess)
+            {
+                listError = result.Error!.Message;
+            }
+            if (listError is null)
+            {
+                await ReloadAsync();
+            }
+        }
+        finally
+        {
+            archiving = false;
+        }
+    }
+
+    private async Task SaveThemeAsync()
+    {
+        if (savingTheme)
+        {
+            return;
+        }
+        savingTheme = true;
+        themeSaved = false;
+
+        try
+        {
+            if (!await IsAuthorizedAsync(AuthorizationPolicies.ManageCommunication))
+            {
+                themeError = AccessDenied;
+                return;
+            }
+
+            Result result = Result.Success();
+            themeError = await TryRunAsync(async () => result = await AnnouncementService.SaveThemeAsync(sunday.Year, sunday.Month, theme),
+                "Impossible d'enregistrer le thème");
+            if (themeError is null && !result.IsSuccess)
+            {
+                themeError = result.Error!.Message;
+            }
+            themeSaved = themeError is null;
+        }
+        finally
+        {
+            savingTheme = false;
+        }
+    }
+}

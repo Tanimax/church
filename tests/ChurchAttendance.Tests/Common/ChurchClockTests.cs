@@ -43,4 +43,21 @@ public class ChurchClockTests
         Assert.Equal(new DateTime(2026, 12, 6, 10, 0, 0), clock.ToLocal(winterUtc));
         Assert.Equal(winterUtc, clock.ToUtc(new DateTime(2026, 12, 6, 10, 0, 0)));
     }
+
+    [Fact]
+    public void UpcomingSunday_OnSaturday_IsTomorrow()
+    {
+        var clock = FixedTimeProvider.ChurchClockAt(FixedTimeProvider.SaturdayEveningInMontreal);
+
+        Assert.Equal(new DateOnly(2026, 10, 25), clock.UpcomingSunday);
+    }
+
+    [Fact]
+    public void UpcomingSunday_OnSundayMorning_IsToday()
+    {
+        // Sunday 2026-10-25 at 10:00 EDT.
+        var clock = FixedTimeProvider.ChurchClockAt(new DateTimeOffset(2026, 10, 25, 14, 0, 0, TimeSpan.Zero));
+
+        Assert.Equal(new DateOnly(2026, 10, 25), clock.UpcomingSunday);
+    }
 }

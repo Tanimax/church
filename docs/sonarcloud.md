@@ -5,8 +5,9 @@ tests**, l'analyse doit tourner dans GitHub Actions (`.github/workflows/sonar.ym
 automatique de SonarCloud ne lit pas la couverture d'un projet .NET.
 
 Le workflow compile la solution, lance `tests/ChurchAttendance.Tests` avec la couverture
-(coverlet, format OpenCover) et envoie le tout à SonarCloud. Les migrations et `wwwroot` sont
-exclus du calcul de couverture.
+(coverlet, format OpenCover) et envoie le tout à SonarCloud. Les migrations, générées par
+`dotnet ef` et jamais modifiées à la main, sont exclues de l'analyse ; `wwwroot` (bibliothèques
+tierces) est exclu du calcul de couverture.
 
 ## Mise en place (une seule fois, dans cet ordre)
 

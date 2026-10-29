@@ -16,6 +16,7 @@ public class NavigationTests
     [InlineData("admin/reports/visiteurs?annee=2026", new[] { "Accueil", "Rapports", "Visiteurs" })]
     [InlineData("admin/reports/anniversaires", new[] { "Accueil", "Rapports", "Anniversaires" })]
     [InlineData("admin/programmation", new[] { "Accueil", "Communication", "Programmation" })]
+    [InlineData("admin/annonces", new[] { "Accueil", "Communication", "Annonces" })]
     [InlineData("admin/members/", new[] { "Accueil", "Membres" })]
     public void Trail_FollowsTheMenu(string path, string[] titles)
     {
@@ -62,7 +63,7 @@ public class NavigationTests
         Assert.True(groups["Rapports"].Open);
         Assert.Equal(["Sainte Cène", "Visiteurs", "Anniversaires"], groups["Rapports"].Links);
         Assert.False(groups["Communication"].Open);
-        Assert.Equal(["Programmation"], groups["Communication"].Links);
+        Assert.Equal(["Programmation", "Annonces"], groups["Communication"].Links);
     }
 
     [Theory]

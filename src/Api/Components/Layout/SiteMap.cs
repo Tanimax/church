@@ -37,6 +37,7 @@ public static class SiteMap
         new NavGroup("Communication", "megaphone-fill",
         [
             new NavPage("Programmation", "admin/programmation"),
+            new NavPage("Annonces", "admin/annonces"),
         ], Policy: AuthorizationPolicies.ManageCommunication),
         new NavPage("Membres", "admin/members", "people-fill"),
         new NavPage("École Dominicale", "admin/ecole-dominicale", "mortarboard-fill", Hidden: true),

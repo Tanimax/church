@@ -35,11 +35,16 @@ public static class AnnouncementTexts
         return string.IsNullOrWhiteSpace(announcement.Schedule) ? null : $"{announcement.Schedule} :";
     }
 
-    // The heading over the announcement: its own, "Annonce externe", or the month's theme.
-    public static string? Heading(Announcement announcement, string? monthlyTheme) =>
-        !string.IsNullOrWhiteSpace(announcement.Heading) ? announcement.Heading
-        : announcement.Kind == AnnouncementKind.External ? ExternalHeading
-        : monthlyTheme;
+    // The heading over the announcement on its slide: its own, else "Annonce externe" for
+    // another church's, else none (the month's theme is said once, on the title slide).
+    public static string? Heading(Announcement announcement)
+    {
+        if (!string.IsNullOrWhiteSpace(announcement.Heading))
+        {
+            return announcement.Heading;
+        }
+        return announcement.Kind == AnnouncementKind.External ? ExternalHeading : null;
+    }
 
     public static string MonthName(int month) => MonthNames[month - 1];
 

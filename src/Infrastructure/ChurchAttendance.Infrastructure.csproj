@@ -5,6 +5,7 @@
 
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <PackageReference Include="DocumentFormat.OpenXml" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" />
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
     <PackageReference Include="PDFsharp-MigraDoc" />
@@ -14,8 +15,10 @@
   </ItemGroup>
 
   <ItemGroup>
-    <!-- Fonts of the schedule PDF, inside the assembly: no dependency on the machine's fonts. -->
+    <!-- Fonts of the schedule PDF, inside the assembly: no dependency on the machine's fonts.
+         And the church's announcements template, the base of every projected deck. -->
     <EmbeddedResource Include="Documents/Assets/*.ttf" />
+    <EmbeddedResource Include="Documents/Assets/annonces-modele.pptx" />
   </ItemGroup>
 
   <ItemGroup>

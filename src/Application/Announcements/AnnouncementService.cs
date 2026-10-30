@@ -1,4 +1,5 @@
 using ChurchAttendance.Application.Abstractions;
+using ChurchAttendance.Application.Reports;
 using ChurchAttendance.Domain;
 using ChurchAttendance.SharedKernel;
 using ChurchAttendance.SharedKernel.Results;
@@ -40,6 +41,23 @@ public class AnnouncementService(IAppDbContextFactory dbFactory, ChurchClock clo
             .Where(a => !a.IsArchived && (a.EventDate == null || (a.EndDate ?? a.EventDate) >= sunday))
             .ToListAsync();
         return Ordered(candidates.Where(a => a.IsShownOn(sunday)));
+    }
+
+    // The deck projected that Sunday: its announcements, the month's theme, and the
+    // birthdays of the Birthdays report for that Sunday (the week ending on it).
+    public async Task<AnnouncementDeck> GetDeckAsync(DateOnly sunday)
+    {
+        var announcements = await GetShownOnAsync(sunday);
+        var theme = await GetThemeAsync(sunday.Year, sunday.Month);
+
+        await using var db = await dbFactory.CreateDbContextAsync();
+        var withBirthday = await db.Members
+            .Where(m => m.IsActive && m.BirthDay != null && m.BirthMonth != null)
+            .ToListAsync();
+        var birthdays = BirthdayReportService.FindBirthdaysInWeek(withBirthday, sunday.AddDays(-6))
+            .Select(b => b.Member.FullName);
+
+        return AnnouncementDeck.Build(sunday, announcements, theme, birthdays);
     }
 
     public async Task<Result<int>> SaveAsync(AnnouncementFormModel form)

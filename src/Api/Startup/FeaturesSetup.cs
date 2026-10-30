@@ -1,3 +1,4 @@
+using ChurchAttendance.Features.Announcements;
 using ChurchAttendance.Features.CheckIn;
 using ChurchAttendance.Features.Members;
 using ChurchAttendance.Features.Reports;
@@ -17,6 +18,7 @@ public static class FeaturesSetup
         app.MapCheckInEndpoints();
         app.MapReportsEndpoints();
         app.MapScheduleEndpoints();
+        app.MapAnnouncementEndpoints();
         app.MapVisitorEndpoints();
         app.MapAuthEndpoints();
 

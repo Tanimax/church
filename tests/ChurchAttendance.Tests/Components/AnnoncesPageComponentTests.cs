@@ -105,6 +105,25 @@ public sealed class AnnoncesPageComponentTests : IDisposable
     }
 
     [Fact]
+    public async Task Edit_AnExternalAnnouncement_KeepsItExternal()
+    {
+        // Entered when the form still had an "another church" box: editing it doesn't change that.
+        await Service.SaveAsync(new AnnouncementFormModel
+        {
+            Kind = AnnouncementKind.External, EventDate = new DateOnly(2026, 11, 6), Title = "Réveil des dames",
+        });
+        var page = await RenderAsync();
+
+        await page.Find("button:contains('Modifier')").ClickAsync(new MouseEventArgs());
+        await page.Find("#title").ChangeAsync("Réveil des dames à l'Église Par la foi");
+        await Save(page).ClickAsync(new MouseEventArgs());
+
+        await page.WaitForAssertionAsync(() => Assert.Empty(page.FindAll(".modal-content")));
+        var saved = Assert.Single(await Service.GetAllAsync(includeArchived: false));
+        Assert.Equal((AnnouncementKind.External, "Réveil des dames à l'Église Par la foi"), (saved.Kind, saved.Title));
+    }
+
+    [Fact]
     public async Task Preview_ShowsTheAnnouncementAsItsSlideWillRead()
     {
         var page = await RenderAsync();
@@ -113,9 +132,10 @@ public sealed class AnnoncesPageComponentTests : IDisposable
         await page.Find("#title").ChangeAsync("L'Église Par la foi nous invite au réveil des dames.");
         await page.Find("#eventDate").ChangeAsync("2026-11-06");
         await page.Find("#endDate").ChangeAsync("2026-11-08");
-        await page.Find("#external").ChangeAsync(true);
+        await page.Find("#heading").ChangeAsync(AnnouncementTexts.ExternalHeading);
         await page.Find("#details").ChangeAsync("Sujet : Jean 14 : 1-3");
 
+        Assert.Empty(page.FindAll("#external")); // no "another church" box: the heading says it
         var preview = page.Find(".preview");
         Assert.Equal(AnnouncementTexts.ExternalHeading, preview.QuerySelector(".preview-heading")!.TextContent);
         Assert.Equal("Du vendredi 6 au dimanche 8 novembre 2026 :", preview.QuerySelector(".when")!.TextContent);

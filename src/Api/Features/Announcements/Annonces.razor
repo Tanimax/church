@@ -185,18 +185,14 @@ else
                         <div class="form-text">Une ligne par détail. « Sujet : », « Tél. : », « N.B. : »… sont soulignés sur la diapositive.</div>
                     </div>
 
-                    <div class="form-check mb-3">
-                        <input id="external" class="form-check-input" type="checkbox" @bind="draft.IsExternal" />
-                        <label class="form-check-label" for="external">Annonce d'une autre église</label>
-                    </div>
-
                     <details class="mb-3" open="@(!string.IsNullOrWhiteSpace(draft.Heading))">
                         <summary class="form-text">Plus d'options</summary>
                         <label class="form-label mt-2" for="heading">Titre de section</label>
                         <input id="heading" class="form-control" maxlength="@AnnouncementService.MaxHeadingLength"
                                placeholder="Ex. : 2e jeûne annuel" @bind="draft.Heading" />
                         <div class="form-text">
-                            En tête de sa diapositive. Sinon : @(draft.IsExternal ? $"« {AnnouncementTexts.ExternalHeading} »" : "aucun").
+                            En tête de sa diapositive, par exemple « @AnnouncementTexts.ExternalHeading » pour l'invitation d'une autre église.
+                            Sinon : @(draft.IsExternal ? $"« {AnnouncementTexts.ExternalHeading} »" : "aucun").
                         </div>
                     </details>
 
